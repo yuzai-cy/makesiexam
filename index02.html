@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>马原 - 完整答题系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; width: 100%; margin: 0 auto; }
+        .main-container { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+        .sidebar { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: sticky; top: 20px; height: fit-content; }
+        .main-content { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); min-height: 600px; }
+        .sidebar-title { font-size: 1.3em; font-weight: bold; color: #667eea; margin-bottom: 20px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .chapter-list { display: flex; flex-direction: column; gap: 8px; }
+        .chapter-btn { padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px; background: white; cursor: pointer; transition: all 0.3s; text-align: left; font-size: 0.95em; color: #333; }
+        .chapter-btn:hover { border-color: #667eea; background: #f0f4ff; }
+        .chapter-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: #667eea; }
+        .chapter-btn .chapter-name { font-weight: bold; }
+        .chapter-btn .question-count { font-size: 0.8em; opacity: 0.85; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 25px; border-radius: 10px; margin-bottom: 20px; }
+        .header h1 { font-size: 1.4em; margin-bottom: 5px; }
+        .progress { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .progress-text { font-size: 0.95em; }
+        .stats { display: flex; gap: 15px; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.85em; }
+        .question { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px; border-left: 4px solid #667eea; }
+        .question-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .question-number { font-weight: bold; color: #667eea; font-size: 1em; }
+        .question-type { background: #667eea; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.75em; }
+        .question-content { font-size: 1.05em; line-height: 1.7; margin-bottom: 15px; color: #333; }
+        .options { display: grid; gap: 10px; margin-bottom: 12px; }
+        .option { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: all 0.3s; font-size: 0.95em; }
+        .option:hover { border-color: #667eea; background: #f0f4ff; }
+        .option.selected { border-color: #667eea; background: #e7edff; box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+        .option.correct { border-color: #28a745; background: #d4edda; }
+        .option.wrong { border-color: #dc3545; background: #f8d7da; }
+        .option.disabled { cursor: not-allowed; opacity: 0.7; }
+        .option-letter { font-weight: bold; min-width: 22px; }
+        .explanation { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 6px; margin-top: 15px; display: none; }
+        .explanation.show { display: block; }
+        .explanation-title { font-weight: bold; color: #856404; margin-bottom: 8px; }
+        .result-panel { text-align: center; padding: 20px; border-radius: 8px; margin-top: 15px; display: none; }
+        .result-panel.show { display: block; }
+        .result-panel.correct { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+        .result-panel.wrong { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+        .navigation { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0; }
+        .nav-btn { padding: 10px 25px; border: none; border-radius: 20px; cursor: pointer; font-size: 0.95em; transition: all 0.3s; font-weight: bold; }
+        .btn-prev { background: #6c757d; color: white; }
+        .btn-next { background: #667eea; color: white; }
+        .action-bar { display: flex; justify-content: center; gap: 12px; margin-top: 15px; }
+        .action-btn { padding: 10px 25px; border: none; border-radius: 20px; cursor: pointer; font-size: 0.95em; font-weight: bold; }
+        .btn-submit { background: #28a745; color: white; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-next-question { background: #667eea; color: white; }
+        .chapter-summary { text-align: center; padding: 30px; }
+        .chapter-summary h2 { color: #667eea; margin-bottom: 20px; }
+        .summary-stats { display: grid; gap: 15px; max-width: 400px; margin: 0 auto 30px; }
+        .summary-stat { padding: 20px; border-radius: 10px; font-size: 1.3em; font-weight: bold; }
+        .summary-stat.correct { background: #d4edda; color: #155724; }
+        .summary-stat.wrong { background: #f8d7da; color: #721c24; }
+        .summary-stat.skip { background: #e2e3e5; color: #383d41; }
+        .accuracy-rate { font-size: 1.4em; font-weight: bold; margin: 20px 0; }
+        .overall-summary { display: grid; gap: 15px; max-width: 600px; margin: 0 auto; }
+        .chapter-progress { padding: 15px 20px; border-radius: 10px; display: flex; justify-content: space-between; }
+        .chapter-progress.completed { background: #d4edda; color: #155724; }
+        .chapter-progress.incomplete { background: #fff3cd; color: #856404; }
+        .btn-skip { background: #ffc107; color: #333; }
+        .detail-list { 
+            text-align: left; 
+            max-width: 800px; 
+            margin: 30px auto; 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 10px; 
+        }
+        .detail-item { 
+            padding: 15px; 
+            border-bottom: 1px solid #e0e0e0; 
+        }
+        .detail-item:last-child { 
+            border-bottom: none; 
+        }
+        .detail-item.correct { 
+            border-left: 4px solid #28a745; 
+        }
+        .detail-item.wrong { 
+            border-left: 4px solid #dc3545; 
+        }
+        .detail-item.skip { 
+            border-left: 4px solid #ffc107; 
+        }
+        .detail-item .question-preview { 
+            font-size: 0.95em; 
+            margin-bottom: 8px; 
+        }
+        .detail-item .answer-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .review-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .review-filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            align-items: center;
+        }
+        .filter-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 10px;
+        }
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s;
+        }
+        .filter-select:hover {
+            border-color: #667eea;
+        }
+        .filter-select.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        .review-mode-toggle {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .mode-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            background: white;
+        }
+        .mode-btn:hover {
+            border-color: #667eea;
+        }
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .review-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .review-card.question-type-choice {
+            border-left-color: #667eea;
+        }
+        .review-card.question-type-multiple {
+            border-left-color: #ffc107;
+        }
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .review-question {
+            font-size: 1.05em;
+            line-height: 1.7;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .review-type-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        .review-type-badge.multiple {
+            background: #ffc107;
+            color: #333;
+        }
+        .review-options {
+            margin: 15px 0;
+        }
+        .review-option {
+            padding: 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .review-option.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        .review-option.correct .option-letter {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .review-answer {
+            margin-top: 15px;
+            padding: 15px;
+            background: #d4edda;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .review-answer-label {
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 8px;
+        }
+        .review-answer-text {
+            font-size: 1.1em;
+            color: #155724;
+        }
+        .review-explanation {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .review-explanation-label {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        .review-chapter-badge {
+            display: inline-block;
+            background: #e7edff;
+            color: #667eea;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-right: 10px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .pagination .btn-prev {
+            background: #6c757d;
+            color: white;
+        }
+        .pagination .btn-next {
+            background: #667eea;
+            color: white;
+        }
+        .pagination button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .pagination-info {
+            font-size: 0.95em;
+            color: #666;
+        }
+        @media (max-width: 968px) {
+            .main-container { grid-template-columns: 1fr; }
+            .sidebar { position: relative; top: 0; }
+            .chapter-list { flex-direction: row; flex-wrap: wrap; }
+            .chapter-btn { flex: 1; min-width: 120px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-container">
+            <div class="sidebar">
+                <div class="sidebar-title">📚 章节目录</div>
+                <div class="chapter-list" id="chapterList"></div>
+            </div>
+            <div class="main-content" id="contentArea"></div>
+        </div>
+    </div>
+
+    <script>
+// 导论单选题
+const introQuestions = [
+    { id: 1, type: 'choice', content: '马克思主义是一个博大精深的理论体系。它的三个组成部分是（   ）。', options: ['A.马克思主义哲学、马克思主义政治学、马克思主义经济学', 'B.马克思主义哲学、马克思主义政治经济学、科学社会主义', 'C.马克思主义认识论、辩证唯物主义、历史唯物主义', 'D.马克思主义哲学、马克思主义经济学、科学社会主义'], answer: 'B', explanation: '马克思主义的三个组成部分是：马克思主义哲学、马克思主义政治经济学、科学社会主义。' },
+    { id: 2, type: 'choice', content: '马克思主义公开问世的标志是（      ）。', options: ['A.《德意志意识形态》的发表', 'B.《共产党宣言》的发表', 'C.《资本论》的发表', 'D.《神圣家族》的发表'], answer: 'B', explanation: '1848年《共产党宣言》的发表标志着马克思主义的公开问世。' },
+    { id: 3, type: 'choice', content: '马克思主义中国化最新理论成果，被誉为21世纪马克思主义、当代中国的马克思主义，为马克思主义的发展做出了时代性、原创性贡献的是（      ）。', options: ['A."三个代表"思想', 'B.科学发展观', 'C.人类命运共同体思想', 'D.习近平新时代中国特色社会主义思想'], answer: 'D', explanation: '习近平新时代中国特色社会主义思想。' },
+    { id: 4, type: 'choice', content: '马克思主义的产生具有深刻的社会根源、阶级基础和思想渊源，其创始人马克思1818年5月5日出生在德国特利尔城的一个律师家庭，恩格斯1820年11月28日出生在德国巴门市的一个工厂主家庭，他们放弃了舒适安逸的生活，毅然选择了充满荆棘坎坷的革命道路，创立了科学社会主义，马克思、恩格斯之所以能够创立科学社会主义，主要是因为（      ）。', options: ['A.德国是当时最为发达的资本主义国家', 'B.他们对时代有着超越常人的认知能力', 'C.社会历史条件和个人努力的相互作用', 'D.他们拥有优良的家教和教育经历'], answer: 'C', explanation: '社会历史条件和个人努力的相互作用。' },
+    { id: 5, type: 'choice', content: '马克思和恩格斯之所以能够实现人类思想史上的伟大革命，是因为他们批判地继承了前人的优秀思想文化和成果，创立了（      ）。', options: ['A.历史唯物主义和剩余价值学说', 'B.唯物主义和资本论', 'C.劳动价值论和剩余价值学说', 'D.科学社会主义和资本论'], answer: 'A', explanation: '历史唯物主义和剩余价值学说。' },
+    { id: 6, type: 'choice', content: '马克思主义是关于（  ）的科学。', options: ['A.无产阶级和人类解放', 'B.无产阶级和资产阶级', 'C.哲学和社会科学', 'D.哲学和经济学'], answer: 'A', explanation: '无产阶级和人类解放。' },
+    { id: 7, type: 'choice', content: '在 19 世纪三大工人运动中，集中反映工人政治要求的是（   ）。', options: ['A.法国里昂工人起义', 'B.英国宪章运动', 'C.芝加哥工人起义', 'D.德国西里西亚纺织工人起义'], answer: 'B', explanation: '英国宪章运动集中反映了工人的政治要求。' },
+    { id: 8, type: 'choice', content: '马克思主义产生的经济根源是（  ）。', options: ['A.工业革命', 'B.资本主义经济危机', 'C.资本主义社会生产力和生产关系的矛盾运动', 'D.阶级斗争'], answer: 'C', explanation: '资本主义社会生产力和生产关系的矛盾运动' },
+    { id: 9, type: 'choice', content: '马克思主义产生的阶级基础和实践基础（  ）。', options: ['A.资本主义的剥削和压迫', 'B.无产阶级作为一支独立的政治力量登上了历史舞台', 'C.工人罢工和起义', 'D.工人运动得到了"农民的合唱"'], answer: 'B', explanation: '无产阶级作为一支独立的政治力量登上了历史舞台' },
+    { id: 10, type: 'choice', content: '马克思恩格斯进一步发展和完善了英国古典经济学理论是（  ）。', options: ['A.辩证法', 'B.历史观', 'C.劳动价值论', 'D.剩余价值论'], answer: 'C', explanation: '劳动价值论。' },
+    { id: 11, type: 'choice', content: '马克思把黑格尔的辩证法称为（  ）。', options: ['A.合理内核', 'B.基本内核', 'C.精髓', 'D.核心'], answer: 'A', explanation: '合理内核。' },
+    { id: 12, type: 'choice', content: '马克思一再告诫人们，马克思主义理论不是教条，而是行动指南，必须随着实践的变化而发展。马克思主义在指导人们认识世界和改造世界的过程中，在指导社会主义事业发展的过程中，不断与时代特征和各国具体实际相结合，吸收人类历史上一切优秀思想文化，并形成新的理论成果。这体现了马克思主义的（    ）。', options: ['A.实践性', 'B.科学性', 'C.发展性', 'D.改革创新性'], answer: 'C', explanation: '发展性。' },
+    { id: 13, type: 'choice', content: '学习马克思主义基本原理的根本方法是（  ）。', options: ['A.认真阅读马克思主义的经典著作', 'B.了解马克思主义发展史', 'C.理论联系实际', 'D.解放思想'], answer: 'C', explanation: '理论联系实际。' },
+    { id: 14, type: 'choice', content: '习近平新时代中国特色社会主义思想是推进理论创新的光辉典范。新时代谱写马克思主义中国化时代化新篇章，要坚守理论创新的基础和前提，坚守好理论创新的"魂"和"根"。中国化时代化的马克思主义的"魂脉"和"根脉"是（  ）。', options: ['A.马克思主义和中华优秀传统文化', 'B.共产主义远大理想和"天下大同"理想', 'C.全人类共同价值和社会主义核心价值观', 'D.共产主义远大理想和中国特色社会主义共同理想'], answer: 'A', explanation: '马克思主义和中华优秀传统文化' },
+    { id: 15, type: 'choice', content: '习近平指出："马克思主义是人民的理论，第一次创立了人民实现自身解放的思想体系。"在人类思想史上，马克思主义第一次站在人民的立场探求人类自由解放的道路，人民性是马克思主义的（   ）', options: ['A.本质属性', 'B.首要的和基本的观点', 'C.唯一特征', 'D.根本价值目标'], answer: 'A', explanation: '本质属性。' },
+];
+
+const introMultipleQuestions = [
+    { id: 1, type: 'multiple', content: '马克思主义是关于无产阶级和人类解放的科学，实现共产主义是全人类解放的根本体现。人类解放包括（    ）。', options: ['A.从自然的压迫下解放出来', 'B.从客观规律的制约下解放出来', 'C.从旧的社会关系的束缚下解放出来', 'D.从旧的传统观念的禁锢下解放出来'], answer: ['A', 'C', 'D'], explanation: '从自然的压迫下解放出来、从旧的社会关系的束缚下解放出来、从旧的传统观念的禁锢下解放出来。' },
+    { id: 2, type: 'multiple', content: '马克思恩格斯最重要的理论贡献，被称为"一生的两个伟大发现"的是（    ）。', options: ['A.辩证法', 'B.劳动价值论', 'C.唯物史观', 'D.剩余价值学说'], answer: ['C', 'D'], explanation: '唯物史观和剩余价值学说。' },
+    { id: 3, type: 'multiple', content: '作为马克思主义直接理论来源的19世纪西欧三大先进思潮有（  ）。', options: ['A.德国古典哲学', 'B.文艺复兴的思想', 'C.英国古典政治经济学', 'D.英法空想社会主义'], answer: ['A', 'C', 'D'], explanation: '德国古典哲学、英国古典政治经济学、英法空想社会主义。' },
+    { id: 4, type: 'multiple', content: '习近平新时代中国特色社会主义思想是（   ）。', options: ['A.马克思主义中国化最新理论成果', 'B.党和人民实践经验和集体智慧的结晶', 'C.中国特色社会主义理论体系的重要组成部分', 'D.全党全国人民为实现中华民族伟大复兴而奋斗的行动指南'], answer: ['A', 'B', 'C', 'D'], explanation: '马克思主义中国化最新理论成果、党和人民实践经验和集体智慧的结晶、中国特色社会主义理论体系的重要组成部分、行动指南。' }
+];
+
+// 第一章单选题 - 完整41题
+const chapter1Questions = [
+    { id: 1, type: 'choice', content: '马克思主义哲学与唯心主义哲学、旧唯物主义哲学的根本区别在于（      ）。', options: ['A.坚持人的主体地位', 'B.坚持用辩证发展的观点去认识世界', 'C.坚持物质第一性、意识第二性', 'D.坚持从客观的物质实践活动去理解现实世界'], answer: 'D', explanation: '从客观的物质实践活动去理解现实世界。' },
+    { id: 2, type: 'choice', content: '哲学上两大基本派别是（  ）。', options: ['A.辩证法和形而上学', 'B.唯物主义和唯心主义', 'C.可知论和不可知论', 'D.反映论和先验论'], answer: 'B', explanation: '唯物主义和唯心主义。' },
+    { id: 3, type: 'choice', content: '唯物主义和唯心主义的标准是指（      ）。', options: ['A.对世界本原究竟是物质还是精神的回答', 'B.对思维和存在是否具有同一性的回答', 'C.对社会存在与社会意识关系的回答', 'D.对世界是怎样存在的问题的回答'], answer: 'A', explanation: '对世界本原究竟是物质还是精神的回答。' },
+    { id: 4, type: 'choice', content: '"风定花犹落，鸟鸣山更幽"体现了（      ）。', options: ['A.静不是动，动不是静', 'B.静中有动，动中有静', 'C.动是必然的，静是偶然的', 'D.动是静的原因，静是动的结果'], answer: 'B', explanation: '静中有动，动中有静。' },
+    { id: 5, type: 'choice', content: '"橘逾淮为枳"说明了（      ）。', options: ['A.事物的发展变化以时间地点和条件为转移', 'B.事物的普遍联系是通过中介来实现的', 'C.任何实体事物都是普遍联系之网上的一个网结', 'D.事物的变化和发展是一个过程'], answer: 'A', explanation: '事物的发展变化以时间地点和条件为转移。' },
+    { id: 6, type: 'choice', content: '物质的唯一特性是客观实在性，它与自然科学关于具体的物质形态概念之间的关系是（      ）。', options: ['A.整体和部分的关系', 'B.共性与个性的关系', 'C.系统与要素的关系', 'D.两个同等程度范畴'], answer: 'B', explanation: '共性与个性的关系。' },
+    { id: 7, type: 'choice', content: '物质和意识的对立只有在非常有限的范围内才有绝对的意义，这个范围是指（     ）。', options: ['A.物质和意识何者为第一性', 'B.物质和意识是否具有统一性', 'C.物质和意识何者更重要', 'D.物质和意识何者与社会生活的关系更密切'], answer: 'A', explanation: '物质和意识何者为第一性。' },
+    { id: 8, type: 'choice', content: '"少年安能长少年，海波尚变为桑田"体现了（      ）。', options: ['A.运动是永恒的、绝对的和有条件的', 'B.运动是物质的唯一特性', 'C.运动是物质的固有属性和存在方式', 'D.运动是静止的特殊状态'], answer: 'C', explanation: '运动是物质的固有属性和存在方式。' },
+    { id: 9, type: 'choice', content: '在中国春秋战国时期，涌现了很多惊才绝艳的思想家，是一个文化大爆炸的时期，名家是以辩论名实问题为核心发展出来的一个流派，其中的人都非常善于辩论，最有名的就是公孙龙，其最有名的就是那句“白马者，马与白也，马与白马也，故曰白马非马也。”中国古代哲学家公孙龙“白马非马”之说的错误是（      ）。。', options: ['A.混淆了内因和外因的关系', 'B.割裂了矛盾的统一性和斗争性的关系', 'C.曲解了矛盾的主要方面和次要方面的关系', 'D.割裂了矛盾的特殊性和普遍性的关系'], answer: 'D', explanation: '割裂了矛盾的特殊性和普遍性的关系。' },
+    { id: 10, type: 'choice', content: '有一首描述在战争中缺了钉子的马掌会导致国家灭亡的童谣：“钉子缺，蹄铁卸，战马蹶；战马蹶，骑士绝；骑士绝，战事折；战事折，国家灭。”这首童谣包含的哲学原理是（      ）。', options: ['A.事物是普遍联系的', 'B.事物是变化的', 'C.事物的现象是本质的表现', 'D.事物的量变引起质变'], answer: 'A', explanation: '事物是普遍联系的。' },
+    { id: 11, type: 'choice', content: '在19世纪初，火车在发明后的一段时间里受到了人们的质疑。那时候，马车比火车跑得都要快，人们往往讥笑火车的低速度。但是到了20世纪之后，火车早已战胜了马车，成为人们最主要的运载工具之一。火车战胜马车的哲学依据是（      ）。', options: ['A.质量互变规律', 'B.对立统一规律', 'C.新事物必然战胜旧事物的规律', 'D.内因外因的辩证关系规律'], answer: 'C', explanation: '新事物必然战胜旧事物的规律。' },
+    { id: 12, type: 'choice', content: '《百喻经》中有一则寓言，有一个愚人到别人家去做客，他嫌菜没有味道，主人就给他加了点盐。菜里加了盐以后，味道好极了，愚人就想：“菜之所以鲜美，是因为有了盐，加一点点就如此鲜美，如果加更多的盐岂不是更加好吃？”回家以后，他把一把盐放进嘴里，结果又苦又咸，这则寓言给我们的启示是（      ）。', options: ['A.持续的量变会引起事物发生质的变化', 'B.在认识和处理问题时要掌握适度的原则', 'C.在事物的发展过程中要时时注意事物的自我否定', 'D.不可能通过一些现象而去认识某个事物的本质'], answer: 'B', explanation: '在认识和处理问题时要掌握适度的原则。' },
+    { id: 13, type: 'choice', content: '心理学家奥瑞·利欧斯说：“如果你对周围的任何事物都感到不舒服，那是你的感受造成的，并非事物本身如此。若能够对感受进行调整，你就可以在任何时候都振作起来。”这段话蕴含哲理是（      ）。', options: ['A.事物的存在并非客观的', 'B.理论对实践具有指导作用', 'C.事物的价值完全取决于主观感觉', 'D.意识对人体生理活动具有调节和控制作用'], answer: 'D', explanation: '意识对人体生理活动具有调节和控制作用。' },
+    { id: 14, type: 'choice', content: '.恩格斯说：“马克思的整个世界观不是教义，而是方法。它提供的不是现成的教条，而是进一步研究的出发点和提供这种研究使用的方法。”唯物辩证法作为关于自然、社会、人类思维发展一般规律的科学，是人们认识世界和改造世界的根本方法。唯物辩证法的总特征是（      ）。', options: ['A.量变和质变的观点', 'B.联系和发展的观点', 'C.对立统一的观点', 'D.辩证否定的观点'], answer: 'B', explanation: '联系和发展的观点。' },
+    { id: 15, type: 'choice', content: '近年来全球金融市场频频发生大幅震荡，有经济学家认为2008年金融危机以来形成的新的经济泡沫可能又将破裂。对此，有人对过去几百年间著名的泡沫时期进行了研究，得出了这样的结论：每个泡沫都会破裂，无一例外。但是预测泡沫何时会达到临界状态并破灭，总是比较困难。它就像掉落到地板上的沙粒，堆成了土堆一样顶部变得日渐狭窄。在某个节点，一粒沙就会引发雪崩。谁知道是哪一粒呢？以上材料蕴含的哲学原理是（   ）。', options: ['A.可能性与不可能性相互转化', 'B.必然要通过偶然表现出来', 'C.人类活动的结果是完全无法预见的', 'D.事物的发展就是循环往复'], answer: 'B', explanation: '必然要通过偶然表现出来，并为自己开辟道路。' },
+    { id: 16, type: 'choice', content: '马克思主义的最本质的东西，马克思主义的活的灵魂：具体地分析具体情况”。这就是要人们在实践中学会运用（      ）。', options: ['A.矛盾普遍性原理', 'B.运动、发展的原理', 'C.普遍联系的原理', 'D.矛盾特殊性原理'], answer: 'D', explanation: '矛盾特殊性原理。' },
+    { id: 17, type: 'choice', content: '.2016年6月，中国科学院合肥物质科学研究院固体物理研究所特聘研究员亚历山大研究团队利用金刚石对顶砧并结合脉冲激光加热技术，直观呈现了地球内部极端高温高压条件下铁的热力学行为，从而解释了地球磁场稳定存在的原因。该成果具有解释地球磁场由来和解读地球温度演化的双重意义。这表明（    ）。', options: ['A.思维和存在具有同一性', 'B.人类可以穷尽对客观世界的认识', 'C.在规律面前，人是无能为力的', 'D.人能够认识和创造规律'], answer: 'A', explanation: '思维和存在具有同一性。' },
+    { id: 18, type: 'choice', content: '有研究表明，“暗物质”“和暗能量”约占宇宙物质总质量的96%。科学家预计，如果我们对暗物质和暗能量有了突破性的认识，人类的宇宙观将会发生巨大的改变，人们对时间、空间和物质等的看法也将和过去有所不同。材料蕴含的哲学道理是（   ）。', options: ['A.具体科学的进步推动哲学发展', 'B.思维和存在的关系问题是哲学的基本问题', 'C.哲学可以锻炼人们的思维能力', 'D.哲学为具体科学提供世界观和方法论指导'], answer: 'A', explanation: '具体科学的进步推动哲学发展。' },
+    { id: 19, type: 'choice', content: '.广大农民在致富奔小康的过程中深切体会到：“要富口袋，先富脑袋”，这一说法在哲学上的含义是（    ）。', options: ['A.精神是第一性的，物质是第二性的', 'B.精神的力量可以变成物质的力量', 'C.精神的力量可以代替物质的力量', 'D.先有精神，后有物质'], answer: 'B', explanation: '精神的力量可以变成物质的力量。' },
+    { id: 20, type: 'choice', content: '亚里士多德认为，世界没有虚空，世界充满着相互差别的存在物，运动就发生在这些存在物的相互作用之中，这说明（    ）。。', options: ['A.事物是变化发展的', 'B.世界是客观存在的物质世界', 'C.运动的方式是多种多样的', 'D.物质和运动不可分割'], answer: 'D', explanation: '物质和运动不可分割。' },
+    { id: 21, type: 'choice', content: '某地区进入供暖季后常常出现雾霾，而一旦出现大风天气或等到春暖花开后，雾霾就会散去或减少，从该地区较长时间的数据变化看，经过人们努力治霾，污染物排放总量在持续走低；但在某些时段，环境空气质量污染指数会迅速攀升，甚至“爆表”。这种看似“矛盾”的现象凸显了大气污染防治的一大特点：天帮忙很重要，但人努力才是根本。“人努力”与“天帮忙”之间的关系对我们正确处理主观能动性和客观规律之间辩证关系的启示是（    ）', options: ['A.尚未认识的外在自然规律对人的实践活动起着至关重要的作用', 'B.人类有意识的思想活动是掌握客观规律的根本前提', 'C.认识活动是客观规律性与主观能动性相统一的基础', 'D.尊重事物的客观规律是正确发挥主观能动性的前提'], answer: 'D', explanation: '尊重事物的客观规律是正确发挥主观能动性的前提。' },
+    { id: 22, type: 'choice', content: '.有人认为，既然人的意识是对客观外部世界的反映，那么人脑里的“鬼”“神”意识就是对外在世界鬼、神真实存在的反映。这种观念的错误在于（    ）。', options: ['A.把意识看成物质的产物', 'B.夸大了意识的能动作用', 'C.混淆了人类意识自然演化的阶段', 'D.认为意识是对存在的直观反映'], answer: 'D', explanation: '认为意识是对存在的直观反映。' },
+    { id: 23, type: 'choice', content: '关于矛盾是事物发展动力的原理，正确的有（    ）。', options: ['A.矛盾的同一性是事物量变的动力', 'B.矛盾的斗争性是事物质变的动力', 'C.内部矛盾和外部矛盾的相互作用是事物发展的动力', 'D.矛盾的同一性和斗争性的相互作用是事物发展的动力'], answer: 'D', explanation: '矛盾的同一性和斗争性的相互作用是事物发展的动力。' },
+    { id: 24, type: 'choice', content: '"居安思危"体现的哲学道理是（    ）。', options: ['A.事物发展是量变和质变的统一', 'B.矛盾双方在一定条件下可以相互转化', 'C.矛盾既具有普遍性又具有特殊性', 'D.内因和外因相结合推动事物发展'], answer: 'B', explanation: '矛盾双方在一定条件下可以相互转化。' },
+    { id: 25, type: 'choice', content: '无人驾驶技术将对未来的交通带来深刻变革。某公司的一辆无人驾驶汽车发生交通事故，引发了人们对该技术前景的担忧。不过有专家认为，这并不会从根本上影响无人驾驶技术的研发和应用。人们对无人驾驶技术的乐观预测所体现的思维方式是（    ）。', options: ['A.量变是质变的必要准备', 'B.要抓住事物的主要矛盾', 'C.要看到矛盾的主要方面', 'D.质变是量变的必然结果'], answer: 'C', explanation: '要看到矛盾的主要方面。' },
+    { id: 26, type: 'choice', content: '有这样一道数学题：90%x90%x90%x90%x90%=？其答案是约59%。90分看似一个非常不错的成绩，然而，在一项环环相扣的连续不断的工作中，如果每个环节都打点折扣，最终得出的就是不及格。这里蕴含的辩证法道理是（    ）。', options: ['A.量变引起质变', 'B.可能和现实是相互转化的', 'C.必然性通过偶然性开辟道路', 'D.肯定中包含着否定'], answer: 'A', explanation: '量变引起质变。' },
+    { id: 27, type: 'choice', content: '辩证的否定即"扬弃"，它的含义是指（      ）。', options: ['A.抛弃', 'B.事物中好坏两方面的组合', 'C.纯粹的否定', 'D.既克服又保留'], answer: 'D', explanation: '既克服又保留。' },
+    { id: 28, type: 'choice', content: '哲学上两大基本派别是（   ）。', options: ['A.辩证法和形而上学', 'B.唯物主义和唯心主义', 'C.可知论和不可知论', 'D.反映论和先验论'], answer: 'B', explanation: '唯物主义和唯心主义。' },
+    { id: 29, type: 'choice', content: '区分量变和质变的根本标志在于（    ）。', options: ['A.事物的变化是否显著', 'B.事物的变化是否迅速', 'C.事物的变化是大还是小', 'D.事物的变化是否超出度的范围'], answer: 'D', explanation: '事物的变化是否超出度的范围。' },
+    { id: 30, type: 'choice', content: '马克思主义认为，世界的真正统一性在于它的（  ）。', options: ['A.实践性', 'B.运动性', 'C.物质性', 'D.客观性'], answer: 'C', explanation: '物质性。' },
+    { id: 31, type: 'choice', content: '习近平总书记强调，城市发展和治理要统筹好生产、生活、生态三大空间布局。在我国城市化进程的推进和城市规模的拓展过程中，只有实现人口与环境、生产与生活、城市发展与生态保护之间的平衡，“鱼与熊掌”兼得，才能建设人与自然和谐相处、共生共荣的宜居城市。对上述材料分析正确的是（  ）。', options: ['A.联系的客观性和无条件性', 'B.矛盾同一性和斗争性相结合', 'C.搭建新的自在事物的联系', 'D.坚持主要矛盾和次要矛盾的统一'], answer: 'B', explanation: '矛盾的同一性和斗争性相结合推动事物发展。' },
+    { id: 32, type: 'choice', content: '对同一事物不同人有不同反映，这说明（  ）。', options: ['A.意识是主体的自由创造', 'B.意识不受客体影响', 'C.意识受主体状况的影响', 'D.意识的内容是主观的'], answer: 'C', explanation: '意识受主体状况的影响。' },
+    { id: 33, type: 'choice', content: '"从个别到一般，从一般到个别"的思维方法是（  ）。', options: ['A.归纳与演绎', 'B.分析与综合', 'C.抽象到具体', 'D.实践到认识'], answer: 'A', explanation: '归纳与演绎。' },
+    { id: 34, type: 'choice', content: '辩证思维方法从抽象上升到具体的过程是（  ）。', options: ['A.从实践到认识的过程', 'B.从认识到实践的过程', 'C.思维生成现实具体的过程', 'D.在思维中形成"多种规定的统一"的过程'], answer: 'D', explanation: '在思维中形成"多种规定的统一"的过程。' },
+    { id: 35, type: 'choice', content: '巴黎奥运会上，年仅21岁的中国女将郑钦文首次参加奥运会就获得了中国网球首枚奥运女单金牌。高温天气下连续三天三场鏖战，郑钦文说：“现在支撑着我的只有信念。我睡眠不足且非常疲惫，身体状况已经到达了极限。但我不知道为什么，在这次比赛中有一股额外的力量支撑着我。记得在澳网的时候我也是非常疲惫，那时我也很累，感觉我已经无法再继续了。今天虽然我很累，我却感觉可以继续打，即使你现在让我为我的国家再打三个小时，我仍然愿意再来一次！”这说明（    ）。', options: ['A.意识具有目的性和计划性', 'B.意识具有创造性', 'C.意识具有指导实践改造客观世界的作用', 'D.意识具有调控人的行为和生理活动的作用'], answer: 'D', explanation: '意识具有调控人的行为和生理活动的作用。' },
+    { id: 36, type: 'choice', content: '电视剧《庆余年》中，范闲在朝堂上醉酒吟诗的场面令人难忘。他凭借现代记忆，展示了只存在于他一个人记忆中的“千载风流、文采耀目的世界”。以下范闲所吟诵的诗句中体现出时间的一维性哲理的是（    ）。', options: ['A.朝如青丝暮成雪', 'B.天下谁人不识君', 'C.此恨绵绵无绝期', 'D.零丁洋里叹零丁'], answer: 'A', explanation: '朝如青丝暮成雪体现了时间的一维性。' },
+    { id: 37, type: 'choice', content: '一个地方的气候主要取决于纬度、海陆位置、地形，以及大气环流和洋流等因素。纬度、海陆位置、地形等因素在一定时期内基本保持不变，大气环流与洋流二者相互作用就形成相对稳定的气候状态，但当其中一个因素突然“掉链子”，就会发生厄尔尼诺之类的异常现象。厄尔尼诺现象不仅推高全球变暖幅度，更可能导致频次更多、范围更广、强度更大的极端天气，进而影响全球气候。厄尔尼诺现象对全球气候的影响表明，偶然因素是（  ）。。', options: ['A.决定事物发展趋势的根本性因素', 'B.事物发展中可有可无的影响因素', 'C.事物发展中不可忽视的影响因素', 'D.事物发展过程中确定不移的因素'], answer: 'C', explanation: '事物发展中不可忽视的影响因素。' },
+    { id: 38, type: 'choice', content: '此次巴黎奥运会中国体育代表团收获40金，27银，24铜。这优异成绩的背后，不仅彰显着中国体育事业的进步，更让我们目睹了一大批00后新生代运动员的崛起，“中国飞鱼”潘展乐在男子100米自由泳决赛中，成功打破历史纪录为国家游泳队夺得了首枚金牌；“火箭少女”郑钦文获得中国网球首枚奥运女单金牌，等等，是众多奥运健将用精湛的技术，稳定的心态帮助中国队取得一枚又一枚的金牌，创造了中国代表团境外参赛的最佳战绩。上述材料所体现的哲学原理是（  ）。。', options: ['A.量变是质变的必然准备', 'B.尊重客观规律是正确发挥主观能动性的前提', 'C.人民群众是历史的创造者', 'D.实践决定认识'], answer: 'A', explanation: '事物的发展总是从量变开始的。' },
+    { id: 39, type: 'choice', content: '哲学史宛如色彩斑斓的壁毯，其中唯物主义与唯心主义犹如浓粗的经线贯穿上下，而辩证法与形而上学如同纬纱交织其中。”这句话形象地描绘了唯物主义和唯心主义以及辩证法和形而上学 在哲学发展史上的对立和斗争。以下说法正确的是（  ）。。', options: ['A. 唯物主义就是辩证法', 'B. 唯心主义就是形而上学', 'C. 它们是对哲学基本问题两个方面的不同回答', 'D. 唯物主义与唯心主义的对立和斗争中交织着辩证法与形而上学的对立和斗争'], answer: 'D', explanation: '唯物主义与唯心主义的对立和斗争中交织着辩证法与形而上学的对立和斗争。' },
+    { id: 40, type: 'choice', content: '法国生命哲学家柏格森十分强调运动变化，以至于他的哲学被称为“变的哲学”。在柏格森看  来，“事物和状态不过是我们的心灵所采取的一种观点，事物是不存在的，存在的只有动作。” 这句话的错误在于否认了（  ）。', options: ['A. 世界万物是永恒发展', 'B. 运动形式具有多样性', 'C.运动是事物的存在方式和唯一属性', 'D. 物质是运动的承担者'], answer: 'D', explanation: '物质是运动的承担者。' },
+    { id: 41, type: 'choice', content: '2023年年初，一款名叫ChatGPT的人工智能聊天机器人火爆全球。ChatGPT的“聪明” 程度足以通过美国行医执照、研究生入学等考试。有专家表示，目前 ChatGPT的对话能力已超出人类平均水准，未来其能达到的类人对话水平值得期待。人工智能的出现表明（   ）', options: ['A.人脑中的所有东西都可以化约为数字信号', 'B.人类意识已经发展到能够把意识活动部分地从人脑中分离出来', 'C.人类的情感、信念、意志、创造性思维等已经可以被还原为数据信息', 'D.计算能力最强大、最先进的智能机器已经可以取代和超越人类智能'], answer: 'B', explanation: '人类意识已经发展到能够把意识活动部分地从人脑中分离出来。' }
+];
+
+// 第一章多选题 - 完整17题
+const chapter1MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '"巧妇难为无米之炊"的哲学意义包括（     ）。', options: ['A.精神是第一性的', 'B.物质是第一性的', 'C.主观能动性的发挥，必须尊重客观规律', 'D.画饼不能充饥'], answer: ['B', 'C'], explanation: '物质是第一性的；主观能动性的发挥，必须尊重客观规律。' },
+    { id: 2, type: 'multiple', content: '我国古代哲学家王夫之认为：“动静者，乃阴阳之动静也。”“皆本物之固然。”“静者静动，非不动也。”“静即含动，动不含静。”“动、静，皆动也。”这在哲学上表达了（      ）。', options: ['A.运动和静止都是物质的固有属性', 'B.静止是运动的特殊状态', 'C.静止是相对的，运动是绝对的', 'D.运动是静止的总和'], answer: ['B', 'C'], explanation: '静止是运动的特殊状态；静止是相对的，运动是绝对的。' },
+    { id: 3, type: 'multiple', content: '长江的年龄到底有多大？这里说的长江“年龄”，是指从青藏高原奔流而下注入东海的“贯通东流”水系的形成年代。如果说上游的沉积物从青藏高原、四川盆地顺流而下能到达下游，这就表明长江贯通了，这就是物源示踪。我国科学家采用这一方法，研究长江中下游盆地沉积物的来源，从而判别长江上游的物质何时到达下游，间接指示了长江贯通东流的时限。他们经过10多年的研究，提出长江贯通东流的时间距今约2300多万年。这一研究成果从一个侧面显示出（   ）。', options: ['A.时间和空间是有限的', 'B.时间和空间是通过物质运动的变化表现出来的', 'C.时间和空间是指标示物质运动的观念形式', 'D.时间和空间是物质运动的存在形式'], answer: ['B', 'D'], explanation: '时间和空间是通过物质运动的变化表现出来的；时间和空间是物质运动的存在形式。' },
+    { id: 4, type: 'multiple', content: '恩格斯说：“当我们深思熟虑地考察自然界或人类历史或我们自己的精神活动的时候，首先呈现在我们眼前的，是一幅由种种联系和相互作用无穷无尽地交织起来的画面。”这段话所包含的辩证法观点有（    ）。', options: ['A.联系是客观世界的本性', 'B.一切事物都处于相互联系之中', 'C.世界是一个相互联系的统一整体', 'D.联系既是普遍的又是复杂多样的'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 5, type: 'multiple', content: '"如果偶然性不起任何作用的话，那么世界历史就会带有非常神秘的性质"这一观点（    ）。', options: ['A.夸大了偶然性的作用，是唯心主义非决定论', 'B.把偶然性和必然性的作用相混同', 'C.既承认偶然性的作用，又承认必然性的作用，是辩证决定论的观点', 'D.说明事物发展是必然性和偶然性综合作用的结果'], answer: ['C', 'D'], explanation: '既承认偶然性的作用，又承认必然性的作用，是辩证决定论的观点；说明事物发展是必然性和偶然性综合作用的结果。' },
+    { id: 6, type: 'multiple', content: '下列现象属于量变引起质变的有（    ）。', options: ['A.生产力的增长引起生产关系的变革', 'B.物体由于量的不同而区分不同的体积', 'C.在一定温度下鸡蛋孵出小鸡', 'D.由遗传和变异的矛盾引起旧物种到新物种的变化'], answer: ['A', 'C', 'D'], explanation: '生产力的增长引起生产关系的变革；在一定温度下鸡蛋孵出小鸡；由遗传和变异的矛盾引起旧物种到新物种的变化。' },
+    { id: 7, type: 'multiple', content: '母质、气候、生物、地形、时间是土壤形成的五大关键成土因素。母质是土壤形成物质基础的初始无机养分的最初来源。气候导致矿物的风化和合成，有机质的形成和积累，土壤中物质的迁移，分解和合成。生物包括植物、动物和微生物等，是促进土壤发生发展最活跃的因素。地形可以使物质在地表进行再分配，使土壤及母质在接受光、热、水等条件方面发生差异。时间是阐明土壤形成发展的历史动态过程，母质、气候、生物和地形等对成土过程的作用随着时间延续而加强。土壤的生产过程说明（  ）。', options: ['A.事物总是作为过程而存在', 'B.时间是物质运动的存在形式', 'C.事物的发展总是呈现出线性上升的态势', 'D.事物的产生是多重因素相互作用的结果'], answer: ['A', 'B', 'D'], explanation: '事物总是作为过程而存在；时间是物质运动的存在形式；事物的产生是多重因素相互作用的结果。' },
+    { id: 8, type: 'multiple', content: '在哲学讨论课上，一位同学说：“物质是永恒的”，另一位同学说：“一切事物都是有生有灭的。”这两种说法并不矛盾，因为他们所说的“物质”和“事物”是（    ）。', options: ['A.抽象与具体的关系', 'B.普遍与特殊的关系', 'C.客观与主观的关系', 'D.整体与部分的关系'], answer: ['A', 'B'], explanation: '抽象与具体的关系；普遍与特殊的关系。' },
+    { id: 9, type: 'multiple', content: '恩格斯说：“运动，就它被理解为存在方式，被理解为物质的固有属性这一最一般的意义来说，囊括宇宙中发生的一切变化和过程，从单纯的位置变动起直到思维。”这段话说明（  ）。', options: ['A.运动是物质的存在方式和根本属性', 'B.没有脱离运动的物质', 'C.没有离开物质的运动', 'D.运动就是物质'], answer: ['A', 'B', 'C'], explanation: '运动是物质的存在方式和根本属性；没有脱离运动的物质；没有离开物质的运动。' },
+    { id: 10, type: 'multiple', content: '恩格斯说：“我们不要过分陶醉于我们人类对自然界的胜利。对于每一次这样的胜利，自然界都对我们进行报复。每一次胜利在第一步都确实取得了我们预期的结果，但是在第二和第三步都有了完全不同的、出乎预料的影响，它常常把第一个结果重新消除。”这段话给我们的启示是（  ）。', options: ['A.人与自然的和谐最终以恢复原始生态为归宿', 'B.人们改造自然的任何行动都会遭到自然的报复', 'C.人们应当合理地调节人与自然之间的物质变换', 'D.人们应当树立尊重自然、顺应自然、保护自然的生态文明理念'], answer: ['C', 'D'], explanation: '应合理地调节人与自然之间的物质变换；应树立尊重自然、顺应自然、保护自然的生态文明理念。' },
+    { id: 11, type: 'multiple', content: '.2015年11月，美国政府批准了一种转基因三文鱼供人类食用，这是全球首例获准供人食用的转基因动物。研究人员将大西洋三文鱼、奇努克三文鱼和大洋鳕鱼这三种鱼进行基因杂交改造，培育出了一种全新的AquAdvantage三文鱼品种。这种鱼可在寒冷气候中依然分泌生长激素，而且生长周期更短，仅需18个月，体格也比普通野生三文鱼大很多。这一事例说明（   ）。', options: ['A.人们不能取消但可以改造自然规律', 'B.人类可以随心所欲地改造自然', 'C.人们可以创造出世界上原来没有的东西', 'D.人类可以在尊重客观规律的基础上充分发挥主观能动性'], answer: ['C', 'D'], explanation: '人们可以创造出世界上原来没有的东西；人类可以在尊重客观规律的基础上充分发挥主观能动性。' },
+    { id: 12, type: 'multiple', content: '在我国，很多农民为了高产，采用的普遍做法是加大种植密度，这就造成通风透光差，田间小气候不好，作物很容易感染病虫害。同样的作物品种，国外的种植密度较国内要低很多。以澳大利亚为例，一亩地通常定植番茄600—800棵（ 我国则达到3300棵），植株在良好的环境下生长，不易生病，单株产量提高，总产量并不比国内低，同时质量高。这说明（     ）。', options: ['A.自然规律是主观与客观的具体的历史的统一', 'B.实践活动中要注意适度原则', 'C.要在尊重自然规律的前提下发挥主观能动性', 'D.恢复原始生态是解决人与自然矛盾的最终途径'], answer: ['B', 'C'], explanation: '实践活动中要注意适度原则；要在尊重自然规律的前提下发挥主观能动性。' },
+    { id: 13, type: 'multiple', content: '近年来网络上出现了一些职业公关团队，为一些企业或者明星进行正面宣传和包装。本来表扬和鼓励一些事情，用意是好的，但如果用力过猛，效果可能适得其反。尤其是长期地进行一些空洞的表扬，久而久之反而发展成了“高级黑”现象，也使得一些粉丝“粉转黑”。这个材料给我们的启示有（  ）。', options: ['A.质变是量变的必然结果', 'B.矛盾的双方在一定条件下相互转化', 'C.在处理问题时要掌握适度的原则', 'D.事物的根本性质每时每刻都发生着变化'], answer: ['A','B', 'C'], explanation: '质变是量变的必然结果;矛盾的双方在一定条件下相互转化；在处理问题时要掌握适度的原则。' },
+    { id: 14, type: 'multiple', content: '20世纪70年代，美国人为了清理淡水中的有害藻类，从中国等亚洲国家引进鲢鱼进入阿肯色州。随后不少养鱼场也纷纷效仿，把鲢鱼当作了好的天然池塘清洁员。20世纪80年代后，亚洲鲤鱼（美国人对青鱼、草鱼、鳙鱼、鲤鱼、鲢鱼等8种鱼的统称）远离限定的水域，进入密西西比河、伊利诺伊河，大量繁殖。这种鱼体型巨大，什么都吃，无任何天敌，给美国十多个州的河流、湖泊生态带来毁灭性灾难。为保护当地的生态，美国政府于2009年底开始大规模捕杀亚洲鲤鱼。以上事例对我们的启示是（  ）。', options: ['A.完全认识世界是不可能的', 'B.事物是普遍联系的', 'C.矛盾存在于一切事物的发展过程中', 'D.人们对自然的每一个正确认识，都是在一定条件下、一定范围内和一定程度上的认识'], answer: ['B', 'C', 'D'], explanation: '事物是普遍联系的；矛盾存在于一切事物的发展过程中；人们对自然的每一个正确认识，都是在一定条件下、一定范围内和一定程度上的认识。' },
+    { id: 15, type: 'multiple', content: '唯物辩证法的基本规律包括（  ）。', options: ['A. 对立统一规律', 'B. 质量互变规律', 'C. 否定之否定规律', 'D. 因果必然规律'], answer: ['A', 'B', 'C'], explanation: '对立统一规律、质量互变规律、否定之否定规律。' },
+    { id: 16, type: 'multiple', content: '关于矛盾的普遍性和特殊性，以下说法正确的是（  ）。', options: ['A. 矛盾存在于一切事物的发展过程中', 'B. 不同事物的矛盾各有其特点', 'C. 普遍性寓于特殊性之中', 'D. 特殊性就是指矛盾的主要方面'], answer: ['A', 'B', 'C'], explanation: '矛盾存在于一切事物的发展过程中；不同事物的矛盾各有其特点；普遍性寓于特殊性之中。' },
+    { id: 17, type: 'multiple', content: '唯物辩证法就其本质来说是批判的、革命的，因为它：（  ）', options: ['A. 认为凡是现存的都是必然要灭亡的', 'B. 对每一种既成的事物都是从其暂时性方面去理解', 'C. 在对现存事物肯定的理解中包含否定的理解', 'D. 认为凡是合理的就一定存在，凡是存在就一定合理'], answer: ['A', 'B', 'C'], explanation: '认为凡是现存的都是必然要灭亡的；对每一种既成的事物都是从其暂时性方面去理解；在对现存事物肯定的理解中包含否定的理解。' }
+];
+
+// 第二章单选题 - 完整18题
+const chapter2Questions = [
+    { id: 1, type: 'choice', content: '马克思指出："搬运工和哲学家之间的原始差别要比家犬和猎犬之间的差别小得多，它们之间的鸿沟是分工造成的。"这表明（  ）。', options: ['A.人的聪明才智无先天区别', 'B.人的聪明才智主要取决于主观努力', 'C.人的聪明才智主要来源于后天实践', 'D.人的聪明才智由社会政治地位决定'], answer: 'C', explanation: '人的聪明才智主要来源于后天实践。' },
+    { id: 2, type: 'choice', content: '唯心主义的认识论根源是（  ）。', options: ['A.否认意识的能动性', 'B.夸大意识的能动性', 'C.否认物质的决定性', 'D.夸大物质的决定性'], answer: 'B', explanation: '夸大意识的能动性。' },
+    { id: 3, type: 'choice', content: '"不唯上，不唯书，不唯师，只唯实"说明（  ）。', options: ['A.书本知识不重要', 'B.一切从实际出发', 'C.上级指示不能成为行动依据', 'D.没有直接经验就没有发言权'], answer: 'B', explanation: '一切从实际出发。' },
+    { id: 4, type: 'choice', content: '"学而不思则罔"是指（  ）。', options: ['A.感性认识需要上升到理性认识', 'B.理性认识需要上升到感性认识', 'C.感性认识是对事物的正确反映', 'D.理性认识是对事物的正确反映'], answer: 'A', explanation: '感性认识需要上升到理性认识。' },
+    { id: 5, type: 'choice', content: '在中国，为了治疗疾病，古代就产生了中医学，这说明（  ）。', options: ['A.认识产生于实践的需要', 'B.认识是实践的目的', 'C.实践是检验认识的标准', 'D.实践是认识的本质'], answer: 'A', explanation: '认识产生于实践的需要。' },
+    { id: 6, type: 'choice', content: '最初人们把文盲定义为“不识字的人”；后来又把文盲确定为“看不懂现代信息符号、图表的人”；而现在联合国把文盲确定为“不能用计算机交流的人”。从哲学上看，这表明（  ）。', options: ['A.人在确定事物的标准上起主导作用', 'B.事物之间是普遍联系的', 'C.人的认识随着社会实践的变化而变化', 'D.人的认识是一个仿佛曲折的过程'], answer: 'C', explanation: '人的认识随着社会实践的变化而变化。' },
+    { id: 7, type: 'choice', content: '毛泽东指出：“马克思主义的哲学认为十分重要的问题，不在于懂得了客观世界的规律性，因而能够解释世界，而在于拿了这种对于客观规律性的认识去能动地改造世界。”指出了（  ）。', options: ['A.实践是认识的来源', 'B.实践是认识发展的动力', 'C.实践是认识的目的', 'D.实践是检验认识正确与否的唯一标准'], answer: 'C', explanation: '实践是认识的目的。' },
+    { id: 8, type: 'choice', content: '检验认识的真理性，就是要检验认识是否同（  ）。', options: ['A.已有的理论相符合', 'B.已被实践证明的真理相符合', 'C.党的路线、方针、政策相符合', 'D.客观事物及其规律相符合'], answer: 'D', explanation: '客观事物及其规律相符合。' },
+    { id: 9, type: 'choice', content: '实践有力地驳斥了不可知论，因为它能够把（  ）。', options: ['A.真理变成现实', 'B.谬误转化为真理', 'C.人的认识能力无限提高', 'D.人的认识器官无限延长'], answer: 'A', explanation: '真理变成现实。' },
+    { id: 10, type: 'choice', content: '10.逐渐“飞入寻常百姓家”的人工智能对人类的社会生活产生了巨大影响。对此，技术乐观派认为人工智能为人类发展更新了“发动机”，悲观派则认为人工智能的发展可能导致“人类的终结”。对人工智能社会效用的评价是（  ）。', options: ['A.对客观发展规律的真理性评价', 'B.对主体发展程度的认知性评价', 'C.受主体情感的主观性评价', 'D.价值性评价'], answer: 'D', explanation: '价值性评价。' },
+    { id: 11, type: 'choice', content: '从历史和实践的角度讲，中国共产党的伟大精神由一个个鲜明具体的“坐标”组成，进而形成了一个可以长久涵养后人的“精神谱系”，中国共产党人精神谱系（如红船精神、井冈山精神、长征精神、延安精神、西柏坡精神、抗美援朝精神、雷锋精神、改革开放精神等）的连续性和发展性体现了（  ）。', options: ['A.客观规律性与主观能动性的统一', 'B.矛盾的普遍性与特殊性的辩证关系', 'C.实践与认识的辩证发展过程', 'D.量变与质变的相互转化'], answer: 'C', explanation: '实践与认识的辩证发展过程。' },
+    { id: 12, type: 'choice', content: '马克思主义认为，实践是认识的来源和发展的动力。2024年巴黎奥运会作为全球性体育盛事，不仅仅是体育竞技的舞台，更是各国文化交流的重要平台。这一实践活动体现了（  ）。', options: ['A.奥运会只是简单的体育赛事', 'B.奥运会促进了各国人民之间的相互理解与认知', 'C.奥运会的举办仅仅是为了展现国家的体育实力', 'D.奥运会的影响仅限于竞技体育领域'], answer: 'B', explanation: '奥运会促进了各国人民之间的相互理解与认知。' },
+    { id: 13, type: 'choice', content: '新时代的伟大变革充分证明，党确立习近平同志党中央的核心、全党的核心地位，确立习近平新时代中国特色社会主义思想的指导地位，反映了全党全军全国各族人民共同心愿，对新时代党和国家事业发展、对推进中华民族伟大复兴历史进程具有决定性意义，这说明（  ）。', options: ['A.真理无需实践检验', 'B.通过新时代的伟大实践，体现了实践是检验真理的唯一标准', 'C.真理只是主观判断', 'D.真理只依赖理论的推演'], answer: 'B', explanation: '通过新时代的伟大实践，体现了实践是检验真理的唯一标准。' },
+    { id: 14, type: 'choice', content: '党的二十届三中全会提出，要以科技现代化支撑引领中国式现代化，并强调深化科技体制改革的重要性。结合马克思主义的认识论，这一提出体现了（  ）。', options: ['A.认识与实践是独立的', 'B.实践是认识的唯一来源，通过深化科技体制改革的实际行动，深化对科技现代化的认识', 'C.理论创新不需要实践的支持', 'D.实践与认识无关'], answer: 'B', explanation: '实践是认识的唯一来源，通过深化科技体制改革的实际行动，深化对科技现代化的认识。' },
+    { id: 15, type: 'choice', content: '党的二十届三中全会提出，必须紧紧抓住数字技术变革机遇，促进数字经济和实体经济深度融合。这一战略部署主要体现了马克思主义认识论中的（  ）。。', options: ['A.感性认识是理性认识的唯一基础', 'B.实践是认识的基础，认识来源于实践', 'C.理性认识不需要依赖感性认识', 'D.认识与实践无关'], answer: 'B', explanation: '实践是认识的基础，认识来源于实践。' },
+    { id: 16, type: 'choice', content: '习近平总书记在党的二十大报告中强调，“必须坚持解放思想、实事求是、与时俱进、求真务实，一切从实际出发，着眼解决新时代改革开放和社会主义现代化建设的实际问题，不断回答中国之问、世界之问、人民之问、时代之问”实事求是，是马克思主义的根本观点，是中国共产党人认识世界、改造世界的根本要求，是我们党的基本领导方法、思想方法、工作方法，这反映出（  ）。', options: ['A.体现了对客观事物的独立思考', 'B.基于唯心主义，认为人的意识决定物质世界的存在', 'C.是辩证唯物论的应用，强调认识世界必须从物质的统一性和客观存在出发，遵循客观规律', 'D.强调的是个人经验的重要性'], answer: 'C', explanation: '是辩证唯物论的应用，强调认识世界必须从物质的统一性和客观存在出发，遵循客观规律。' },
+    { id: 17, type: 'choice', content: '恩格斯曾指出：“社会一旦有技术上的需要，则这种需要就会比十所大学更能把科学推向前进。”二十届四中全会围绕中国式现代化建设全局，明确提出“强化国家战略科技力量，加快实现高水平科技自立自强”，全会部署的“推动传统产业高端化、智能化、绿色化转型”“发展新质生产力”“提升产业链供应链韧性和安全水平”等任务，本质上是新时代我国社会在技术创新领域提出的迫切需求。这些需求正引导科研资源向关键核心技术领域集聚，推动人工智能、生物医药、新能源等领域的科学研究实现突破性进展。结合上述内容，恩格斯的这段话表明（ ）。', options: ['A. 认识产生和发展根源于社会实践的需要', 'B. 实践的需要是推动认识发展的唯一动力', 'C. 认识对实践的反作用是推动科技进步的关键', 'D. 社会技术需要决定了认识的深度和广度'], answer: 'A', explanation: '认识产生和发展根源于社会实践的需要。' },
+    { id: 18, type: 'choice', content: '中国脱贫攻坚的一个重要特点是，采取一系列有效举措，把扶贫与扶志扶智结合起来，高度重视精神脱贫、教育脱贫，增强贫困群众自我“造血”的能力与信心。习近平总书记指出：“摆脱贫困首要并不是摆脱物质的贫困，而是摆脱意识和思路的贫困。”这给我们的启示是（  ）', options: ['A.从根本上说认识对实践具有决定作用', 'B.事物发展的根本原因在事物的外部', 'C.实践主体的能力既包括自然能力也包括精神能力', 'D.矛盾的次要方面也能起到支配作用'], answer: 'C', explanation: '实践主体的能力既包括自然能力也包括精神能力。' }
+];
+
+// 第二章多选题 - 完整8题
+const chapter2MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '实践的中介系统包括（  ）。', options: ['A.人的肢体延长的工具系统', 'B.人的感官和大脑延伸的工具系统', 'C.进入主体认识和实践范围的物质系统', 'D.思维中的逻辑方法与操作系统'], answer: ['A', 'B'], explanation: '人的肢体延长的工具系统、人的感官和大脑延伸的工具系统' },
+    { id: 2, type: 'multiple', content: '“批判的武器当然不能代替武器的批判，物质的力量只能用物质的力量来摧毁，理论一经群众掌握，也会变成物质力量。”这一论断的哲学思想是（  ）。 ', options: ['A.理论对实践具有指导作用', 'B.理论不能代替实践', 'C.理论本身就是物质的力量', 'D.理论的作用可以通过实践表现出来'], answer: ['A', 'B', 'D'], explanation: '理论对实践具有指导作用、理论不能代替实践、理论的作用可以通过实践表现出来。' },
+    { id: 3, type: 'multiple', content: '体现真理和价值的辩证关系的有（   ）。', options: ['A.真理既是客观尺度又是价值目标', 'B.遵循真理尺度就要按科学规律办事', 'C.价值的形成以坚持真理为前提', 'D.实现价值是追求真理的目的'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 4, type: 'multiple', content: '必然王国和自由王国是人类在客观世界面前所处的两种不同的社会活动状态，其中（   ）', options: ['A.人受物支配的社会状态', 'B.人支配物的社会状态', 'C.从必然走向自由是无限发展过程', 'D.认识世界和改造世界的过程'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 5, type: 'multiple', content: '随着新一代人工智能技术的发展，基于大模型的生成式人工智能（AIGC）在快速回答提问、创作代码、翻唱经典歌曲等方面取得了新的突破。但是，随着技术迭代，人工智能高效地应用于各行各业时，其带来的风险也不容忽视，比如人工智能生成近似原画的内容、构图，可能侵犯原创作者的知识产权；人工智能技术被恶意使用，可能用来从事制造虚假信息、诈骗等违法活动。守住法律和伦理底线，推动人工智能朝着科技向善的方向发展，关键还在于人们更智慧地使用人工智能工具。“更智慧地使用人工智能工具”意味着（  ）。', options: ['A.技术进步要以维护人民根本利益为最高标准', 'B.人类活动能够实现合目的性与合规律性的统一', 'C.科技发展是由主观意志决定的', 'D.成功的实践是真理尺度与价值尺度的统一'], answer: ['A', 'B', 'D'], explanation: '技术进步要以维护人民根本利益为最高标准；人类活动能够实现合目的性与合规律性的统一；成功的实践是真理尺度与价值尺度的统一。' },
+    { id: 6, type: 'multiple', content: '党的二十大报告系统总结了新时代十年的伟大变革，明确了未来发展的目标和战略部署。结合马克思主义哲学的基本原理，下列哪些选项正确地反映了报告中的哲学思想？(  ).', options: ['A.运用了辩证唯物论的实事求是原则', 'B.体现了唯物辩证法中普遍性与特殊性相结合的原则', 'C.强调解决主要矛盾是推动社会发展的唯一途径', 'D.认为人民群众是历史的创造者'], answer: ['A', 'B', 'D'], explanation: '运用了辩证唯物论的实事求是原则；体现了唯物辩证法中普遍性与特殊性相结合的原则；认为人民群众是历史的创造者。' },
+    { id: 7, type: 'multiple', content: '实践对认识的决定作用表现为（  ）。', options: ['A. 实践是认识的来源', 'B. 实践是认识发展的动力', 'C. 实践是认识的目的', 'D. 实践是检验认识真理性的唯一标准'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 8, type: 'multiple', content: '购买手机从马克思主义认识论的角度，可以概括为（ ）的统一。', options: ['A．合规律性与合目的性', 'B. 价值与使用价值', 'C. 真理尺度与价值尺度', 'D. 生产与消费'], answer: ['A', 'C'], explanation: '合规律性与合目的性；真理尺度与价值尺度。' }
+];
+
+// 第三章单选题 - 完整34题
+const chapter3Questions = [
+    { id: 1, type: 'choice', content: '社会存在决定社会意识，社会意识是社会存在的反映。社会意识具有相对独立性，即它在反映社会存在的同时，还有自己特有的发展形式和规律。社会意识相对独立性最突出的表现是（      ）。', options: ['A.社会意识内部各种形式之间的相互作用', 'B.社会意识与社会存在发展的不完全同步性', 'C.社会意识各种形式各自具有其历史继承性', 'D.社会意识对社会存在具有能动的反作用'], answer: 'D', explanation: '社会意识对社会存在具有能动的反作用。' },
+    { id: 2, type: 'choice', content: '近年来，马克思的《资本论》在西方一些国家销量大增。列宁曾说，马克思的《资本论》的成就之所以如此之大，是由于这本书使读者看到整个资本主义社会形态是个活生生的形态，既有“骨骼”又有“血肉”。人类社会作为一种活的有机体，其“骨骼”系统是指 （      ）。', options: ['A.地理环境、人口因素和生产方式', 'B.与一定的生产力相适应的生产关系', 'C.建立在一定经济基础之上的政治法律制度', 'D.由政治法律思想、道德、宗教等构成的社会意识形态'], answer: 'B', explanation: '与一定的生产力相适应的生产关系。' },
+    { id: 3, type: 'choice', content: '马克思指出，判断一个变革时代不能以该时代的意识为依据，相反，这意识必须从物质生活的矛盾中去解释。这里的“物质生活的矛盾”从根本上说是（    ）。', options: ['A.社会生产力和生产关系的现存冲突', 'B.经济基础与上层建筑的现存冲突', 'C.人类社会与自然界的现存冲突', 'D.社会存在与社会意识的现存冲突'], answer: 'A', explanation: '社会生产力和生产关系的现存冲突。' },
+    { id: 4, type: 'choice', content: '在社会主义条件下，上层建筑对经济基础的保护从根本上说就是（ ）。', options: ['A.为了实现共同富裕', 'B.为了实现社会主义现代化', 'C.为了保障最广大人民群众的物质利益', 'D.为了全面深化改革'], answer: 'C', explanation: '为了保障最广大人民群众的物质利益。' },
+    { id: 5, type: 'choice', content: '“事实雄辩地证明，改革开放是决定当代中国命运的关键抉择，是发展中国特色社会主义、实现中华民族伟大复兴的必由之路；……只有改革开放才能发展中国、发展社会主义、发展马克思主义。”这一论断所表明的是（      ）。', options: ['A.改革是社会主义社会发展的最终动力', 'B.改革只是推动社会主义社会发展的重要动力', 'C.改革对于社会主义社会的发展具有重要意义', 'D.社会主义中国所取得的所有成就都归功于改革'], answer: 'C', explanation: '改革对于社会主义社会的发展具有重要意义。' },
+    { id: 6, type: 'choice', content: '.坚持以人民为中心，就必须坚持人民主体地位，坚持立党为公、执政为民，践行全心全意为人民服务的根本宗旨，把党的群众路线贯彻到治国理政全部活动之中，把人民对美好生活的向往作为奋斗目标。“坚持以人民为中心”的理论基础是唯物史观关于（      ）。', options: ['A.总体的人在总体的历史过程中的主体地位的原理', 'B.人的本质是一切社会关系的总和的原理', 'C.人民群众的活动受到社会历史条件制约的原理', 'D.人民群众是历史的创造者的原理'], answer: 'D', explanation: '人民群众是历史的创造者的原理。' },
+    { id: 7, type: 'choice', content: '恩格斯说过，恰巧拿破仑做了法国的军事独裁者，是因为当时的法国需要这样的人。假如没有拿破仑这个人，那么就会有别人来扮演这个角色。这句话蕴含的哲学思想是（     ）。', options: ['A.任何历史人物的出现都体现了必然性与偶然性的统一', 'B.杰出人物的出现纯粹是偶然的', 'C.社会历史发展是没有规律的', 'D.历史人物都能起到推动社会前进的积极作用'], answer: 'A', explanation: '任何历史人物的出现都体现了必然性与偶然性的统一。' },
+    { id: 8, type: 'choice', content: '"经济上落后的国家在哲学上仍然能够演奏第一小提琴"，这说明（      ）。', options: ['A.社会意识并不都是社会存在的反映', 'B.社会意识与社会存在发展的不完全同步性和不平衡性', 'C.社会意识中的各种形式之间相互作用', 'D.社会意识具有历史继承性'], answer: 'B', explanation: '社会意识与社会存在发展的不完全同步性和不平衡性。' },
+    { id: 9, type: 'choice', content: '恩格斯在《路德维希·费尔巴哈和德国古典哲学的终结》中明确指出，"在社会历史领域内进行活动的，是具有意识的、经过思虑或凭激情行动的、追求某种目的的人；任何事情的发生都不是没有自觉的意图，没有预期的目的的。"这说明（      ）。', options: ['A.社会历史发展是人主观意志的结果', 'B.社会发展的过程同自然界的发展过程是一样的', 'C.历史是无数个追求着自己目的的人的活动的合力', 'D.社会发展总是符合人们的预期的'], answer: 'C', explanation: '历史是无数个追求着自己目的的人的活动的合力。' },
+    { id: 10, type: 'choice', content: '衡量生产力发展水平的客观依据是（      ）。', options: ['A.劳动者的素质', 'B.生产工具', 'C.生产管理的科学化程度', 'D.科学技术水平'], answer: 'B', explanation: '生产工具。' },
+    { id: 11, type: 'choice', content: '唯心史观的根本错误在于它片面夸大了（  ）。', options: ['A.人的作用', 'B.地理环境的作用', 'C.物质生产的作用', 'D.英雄人物的意识和意志的作用'], answer: 'D', explanation: '英雄人物的意识和意志的作用。' },
+    { id: 12, type: 'choice', content: '阶级斗争在社会发展中的巨大作用突出表现在（  ）。', options: ['A.自每个新社会诞生以后的整个发展过程中', 'B.社会形态更替的质变过程中', 'C.每一个社会的各个发展阶段', 'D.某个社会阶段完结以前的瞬间'], answer: 'B', explanation: '社会形态更替的质变过程中。' },
+    { id: 13, type: 'choice', content: '.语言学家认为，语言是一个动态的系统，社会变化是语言演变的重要条件；语言的不断更迭，也直观、生动地体现着社会脉动。2020年，第12版《新华字典》收录了“拼购”“刷屏”等网络词语，经由这类网络热词，可以感受时代发展的进程。以上材料说明（    ）。', options: ['A.社会意识是随着时间的推移而自主变化的', 'B.社会历史归根到底是精神发展史', 'C.社会存在是社会意识内容的客观来源', 'D.社会意识是人们在物质生产中发生的"物质的社会关系"'], answer: 'C', explanation: '社会存在是社会意识内容的客观来源。' },
+    { id: 14, type: 'choice', content: '.中国北方有句俗话，“没吃过猪肉，也见过猪跑”，这种略带戏谑的提法常用来比喻有些事情虽然人们没有亲身经历过，但是也听说过、见识过，略有了解。与物质资料匮乏的年代相比，在城镇化、农业现代化大力推进的当下，很多年轻人只“吃过猪肉”没“见过猪跑”，然而这句流传广泛的俗话依然能够被广大群众理解并继续使用。这一现象对我们的启示是（   ）。', options: ['A.间接经验比直接经验更重要', 'B.语言文化具有绝对稳定性', 'C.意识具有调控人的行为和生理活动的作用', 'D.社会意识具有相对独立性'], answer: 'D', explanation: '社会意识具有相对独立性。' },
+    { id: 15, type: 'choice', content: '理念是行动的先导，一定的发展实践都是由一定的发展理念来引领的。准确把握新发展阶段，加快构建新发展格局，开启全面建设社会主义现代化国家新征程，必须充分发挥新发展理念的科学引领作用。从唯物史观的角度来讲，社会发展理念特别是路线、方针、政策是否正确，取决于（   ）。', options: ['A.它们是否能够正确反映社会存在', 'B.它们能否体现所有人的主观意愿', 'C.它们能否反作用于社会实践', 'D.它们是否借鉴了其他民族和国家的成功经验'], answer: 'A', explanation: '它们是否能够正确反映社会存在。' },
+    { id: 16, type: 'choice', content: '在生产力和生产关系、经济基础和上层建筑这两对社会运动的基本矛盾中（  ）。', options: ['A.两对矛盾是并列统一的关系', 'B.两对矛盾是相互排斥、相互对立的关系', 'C.生产力和生产关系的矛盾运动起决定性作用', 'D.经济基础和上层建筑的矛盾起决定性作用'], answer: 'C', explanation: '生产力和生产关系的矛盾运动起决定性作用。' },
+    { id: 17, type: 'choice', content: '人口因素是构成社会物质生活条件的重要方面，它是指（  ）。', options: ['A.人民群众的文化素质和道德觉悟', 'B.人们从事生产劳动的积极性和创造性', 'C.人口的分布状况和受教育程度', 'D.人口的数量、素质和结构等状况对社会发展的制约和影响作用'], answer: 'D', explanation: '人口的数量、素质和结构等状况对社会发展的制约和影响作用。' },
+    { id: 18, type: 'choice', content: '地理环境在社会存在和发展中的重要作用表现在（  ）。', options: ['A.它是划分社会经济形态的依据', 'B.它是人类社会存在和发展的永恒的、必要的条件', 'C.它是社会制度变更的决定力量', 'D.它是社会性质的决定性因素'], answer: 'B', explanation: '它是人类社会存在和发展的永恒的、必要的条件。' },
+    { id: 19, type: 'choice', content: '人和物的要素之所以能够变成现实的生产力，是因为（  ）。', options: ['A.正确调整分配关系以及由它决定的消费关系', 'B.把科学技术物化在机器工具等生产资料中所产生的必然结果', 'C.一定的生产资料所有制形式能够把诸要素结合起来', 'D.劳动对象范围不断扩大和生产工具的不断改进'], answer: 'C', explanation: '一定的生产资料所有制形式能够把诸要素结合起来。' },
+    { id: 20, type: 'choice', content: '理念是行动的先导，一定的发展实践都是由一定的发展理念来引领的。准确把握新发展阶段，加快构建新发展格局，开启全面建设社会主义现代化国家新征程，必须充分发挥新发展理念的科学引领作用。从唯物史观的角度来讲，社会发展理念特别是路线、方针、政策是否正确，取决于（   ）。', options: ['A.①②', 'B.③④', 'C.②③', 'D.①④'], answer: 'D', explanation: '①人民群众是历史的创造者；④人民群众是推动社会历史发展的决定力量。' },
+    { id: 21, type: 'choice', content: '鲁迅先生说，有一回拿破仑过阿尔卑斯山，说：“我比阿尔卑斯山还要高！”这何等英伟，然而不要忘记他后面跟着许多兵。下列说法与鲁迅先生观点一致的有（  ）。1.历史者英雄之舞台也，舍英雄几无历史。2历史活动是群众的事业.3得民心者得天下.4大人物心理之动稍易其轨，而全部历史可以改观', options: ['A.①③', 'B.①④', 'C.②③', 'D.②④'], answer: 'C', explanation: '②历史活动是群众的事业；③得民心者得天下。' },
+    { id: 22, type: 'choice', content: '习近平总书记在2016年网络安全和信息化工作座谈会上的讲话中指出，“各级党政机关和领导干部要经常上网看看，潜潜水、聊聊天、发发声，了解群众所思所愿，收集好想法好建议，积极回应网民关切、解疑释惑”。这给我们的启示是（  ）。1要坚持人民群众的主体地位.2人民群众是社会物质财富的创造者.3要更好地保障人民群众的权益.4人民群众是社会精神财富的创造者', options: ['A.①②', 'B.②④', 'C.①③', 'D.③④'], answer: 'C', explanation: '①要坚持人民群众的主体地位；③要更好地保障人民群众的权益。' },
+    { id: 23, type: 'choice', content: '巴黎奥运会作为一项国际性的体育盛事，不仅是体育竞技的展示，也是文化交流和国际友谊的平台。从马克思主义关于社会意识和文化发展的角度来看，巴黎奥运会的举办（   ）。', options: ['A. 体现了体育竞技超越国界和文化的特性', 'B. 反映了经济基础决定上层建筑的原理', 'C. 展示了人民群众在文化创造中的主体作用', 'D. 说明了意识形态对社会存在的决定性影响'], answer: 'C', explanation: '展示了人民群众在文化创造中的主体作用' },
+    { id: 24, type: 'choice', content: '24.习近平总书记在《中共中央关于进一步全面深化改革、推进中国式现代化的决定》中指出：要“着眼于推进物质文明和精神文明相协调的现代化，提出推动理想信念教育常态化制度化，改进创新文明培育、文明实践、文明创建工作机制。”作为一定社会经济、政治的反映，文化必然发挥维护或批判现实社会的功能，并影响社会发展的方向。以上材料说明（    ）。', options: ['A.文化为社会发展提供思想指引', 'B.文化为社会发展提供精神动力', 'C.文化为社会发展提供凝聚力量', 'D.文化为社会发展提供智力支持'], answer: 'A', explanation: '文化为社会发展提供思想指引。' },
+    { id: 25, type: 'choice', content: '科学技术革命作为社会动力体系中一种动力，它是（  ）。', options: ['A.社会发展的直接动力', 'B.社会发展的根本动力', 'C.社会发展的一般动力', 'D.历史的有力的杠杆'], answer: 'D', explanation: '历史的有力的杠杆。' },
+    { id: 26, type: 'choice', content: '解放和发展社会生产力是社会主义的本质要求和首要任务，也是推进中国式现代化、实现中华民族伟大复兴的根本任务。新质生产力是对马克思主义生产力理论的创新和发展，凝结着以习近平同志为核心的党中央对领导和推进中国特色社会主义的深邃理论洞见和丰富实践经验，彰显了马克思主义一脉相承的实践性、发展性和时代性。下列哪个选项最准确地运用马克思主义基本原理来解释“新质生产力”的概念？(   ).', options: ['A. 新质生产力是科技进步带来的直接结果，与生产方式无关', 'B. 新质生产力是生产关系变革的先决条件，决定上层建筑的变革', 'C. 新质生产力是指通过技术创新和科学管理等手段，提高现有生产力的质量和效率，创造出新的生产方式和经济增长点', 'D. 新质生产力是资本主义社会特有的现象，与社会主义制度不相容'], answer: 'C', explanation: '新质生产力是指通过技术创新和科学管理等手段，提高现有生产力的质量和效率，创造出新的生产方式和经济增长点。' },
+    { id: 27, type: 'choice', content: '马克思在《资本论》中指出：“劳动生产力是随着科学和技术的不断进步而不断发展的。”当关键性科学技术实现突破、发生质变，必然引发生产力核心因素的变革，从而产生新质生产力，这说明了（  ）。', options: ['A.新质生产力是超越历史条件的独立存在，能够直接推动社会形态的更替', 'B.新质生产力的出现是偶然现象，与社会基本矛盾运动无关', 'C.新质生产力作为生产方式的活跃因素，其发展状况决定生产关系的变革方向，进而推动社会历史的进步', 'D.新质生产力仅存在于发达资本主义国家，是资本主义制度优越性的体现'], answer: 'C', explanation: '新质生产力作为生产方式的活跃因素，其发展状况决定生产关系的变革方向，进而推动社会历史的进步。' },
+    { id: 28, type: 'choice', content: '普列汉诺夫在《论个人在历史上的作用问题》中系统阐述这一思想时提到，“任何英雄人物的历史作用都不能超出他们所处历史条件许可的范围”。如英国资产阶级革命中的克伦威尔，其军事行动与政权建设始终围绕推翻封建王权、维护资产阶级利益展开，无法突破当时资本主义经济初兴的发展阶段这种看法是（  ）。 ', options: ['A.历史唯物主义观点', 'B.机械决定观点', 'C.历史宿命论观点', 'D.历史循环论观点'], answer: 'A', explanation: '历史唯物主义观点。' },
+    { id: 29, type: 'choice', content: '“十五五” 规划时期是中国式现代化全面推进强国建设、民族复兴的关键五年，承担着完成多项重要改革任务的重任，规划中内在包含了推动社会发展的诸多改革措施。从唯物史观角度来看，这一规划的设计理念最直接体现的哲学原理是（    ）。', options: ['A. 改革是解决社会基本矛盾、推动社会发展的根本动力', 'B. 生产力是社会发展的最终决定力量，改革是解放和发展生产力的重要手段', 'C. 改革是社会发展的重要动力，通过调整生产关系与上层建筑适应生产力发展要求', 'D. 社会发展是人的主观意志的产物，改革措施的制定取决于国家发展目标'], answer: 'C', explanation: '改革是社会发展的重要动力，通过调整生产关系与上层建筑适应生产力发展要求。' },
+    { id: 30, type: 'choice', content: '.党的二十届四中全会报告将“满足人民日益增长的美好生活需要” 作为发展的根本目的，既部署“建设强大国内市场”、“促进高质量充分就业”等物质层面举措，又提出“繁荣发展社会主义文化”、“加强普惠性民生建设” 等精神层面部署，通过安徽“皖美养老”、浙江数字化转型创造优质岗位等实践路径，扎实推进全体人民共同富裕，让发展成果更多更公平惠及全体人民。这一部署最集中体现的马克思主义基本原理是（   ）。', options: ['A. 人民群众是历史的创造者', 'B. 人民群众是社会发展的根本动力', 'C. 物质资料生产是社会存在和发展的基础', 'D. 人民群众的历史作用取决于国家政策'], answer: 'A', explanation: '人民群众是历史的创造者，践行马克思主义以人民为中心的价值立场。' },
+    { id: 31, type: 'choice', content: '马克思、恩格斯在《德意志意识形态》中深刻指出：“统治阶级的思想在每一时代都是占统治地位的思想。这就是说，一个阶级是社会上占统治地位的物质力量，同时也是社会上占统治地位的精神力量。”在人类历史的阶级社会形态中，这一论断始终得以印证——奴隶社会中，奴隶主阶级凭借对生产资料（土地、奴隶）的占有，将“奴隶主等级至上”“奴隶天然从属”的观念塑造成社会主流思想；封建社会里，地主阶级依托土地所有权，使“三纲五常”“君权神授”的伦理体系成为维系统治的精神纽带；资本主义社会中，资产阶级掌控资本与生产资料，进而将“个人主义”“自由主义”“私有财产神圣不可侵犯”等价值观推广为社会主导思想。这些现象背后，蕴含着马克思主义唯物史观的核心逻辑。结合上述马克思主义经典论述与历史事实，在阶级社会里，统治阶级的思想之所以处于统治地位，其根本原因是他们（  ）', options: ['A. 掌握了宣传机器', 'B. 代表了历史发展方向', 'C. 人才众多，力量强大', 'D. 在经济上占统治地位'], answer: 'D', explanation: '在经济上占统治地位。' },
+    { id: 32, type: 'choice', content: '党的二十届四中全会强调发展全过程人民民主，健全人民当家作主制度体系，使人民通过多种途径和形式依法管理国家事务。依据马克思主义历史唯物主义关于“人民群众是社会历史的创造者”的原理，下列哪一项最能体现全过程人民民主与人民主体地位之间的理论一致性？（   ）', options: ['A. 政治制度的形成主要取决于技术进步，人民群众的作用相对较弱', 'B. 全过程人民民主的核心是行政效率提升，而非人民主体性的发挥', 'C. 人民群众是社会历史发展的决定力量', 'D. 人民当家作主更多是一种政治理念，与社会历史发展规律没有内在关系'], answer: 'C', explanation: '人民群众是社会历史发展的决定力量，其实践活动构成全过程人民民主最深层的根基。' },
+    { id: 33, type: 'choice', content: '党的二十届四中全会提出，要全面提升国家治理体系和治理能力现代化水平，以适应新时代我国社会主要矛盾变化和发展新要求。根据马克思主义基本原理，社会基本矛盾是社会发展的根本动力。下列选项中，哪一项最能体现国家治理现代化与社会基本矛盾运动之间的内在、必然联系？（   ）', options: ['A. 国家治理现代化主要依靠技术工具升级，与社会制度和结构变化关系不大', 'B. 国家治理现代化是为了提高行政效率，与社会发展动力无关', 'C. 国家治理现代化是为适应生产力与生产关系、经济基础与上层建筑的矛盾运动', 'D. 国家治理现代化完全取决于经济增长速度，与社会矛盾状况无关'], answer: 'C', explanation: '国家治理现代化是为适应生产力与生产关系、经济基础与上层建筑的矛盾运动，通过制度完善更好反映生产力发展要求。' },
+    { id: 34, type: 'choice', content: '马克思认为，资本主义社会的产生有三条道路，即从封建制度的“衰亡”中产生；从奴隶制和农奴制的“解体”中产生；从原始公有制的“崩溃”中产生。这体现了（    ）', options: ['A. 社会形态更替的多样性', 'B. 社会形态跨越的随意性', 'C. 社会发展规律的主观性', 'D. 人类历史发展的曲折性'], answer: 'A', explanation: '社会形态更替的多样性。' }
+];
+
+// 第三章多选题 - 完整16题
+const chapter3MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '下列说法中，关于“社会存在”的正确理解是（    ）。', options: ['A.社会存在也就是指社会物质生活条件，或者说是社会生活的物质方面', 'B.社会存在是指物质生活资料的生产及其生产方式', 'C.由社会意识所引导', 'D.地理环境和人口因素也属于'], answer: ['A', 'B', 'D'], explanation: '社会物质生活条件、物质生活资料的生产及其生产方式、地理环境和人口因素。' },
+    { id: 2, type: 'multiple', content: '马克思说：“无论哪一种社会形态，在它所能容纳的全部生产力发挥出来以前，是决不会灭亡的；而新的更高的生产关系，在它存在的物质条件在旧社会的胞胎里成熟之前，是决不会出现的。”这段话说明（    ）。', options: ['A.生产力的发展是促使社会形态更迭的最终原因', 'B.新的生产关系的产生需要客观的物质条件的成熟', 'C.无论哪一种社会形态，当它还能够促进生产力发展时，是不会灭亡的', 'D.社会形态总是具体的、历史的'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 3, type: 'multiple', content: '科学技术在高度发展的同时，也带来了全球性问题，这一观点表明的道理是（   ）。', options: ['A.全球性问题是科学技术的直接结果', 'B.全球性问题不是科学技术的直接结果', 'C.科学技术的进步是主要的', 'D.科学技术是当代人的"非人化"的根源'], answer: ['B', 'C'], explanation: '全球性问题不是科学技术的直接结果；科学技术的进步是主要的。' },
+    { id: 4, type: 'multiple', content: '"随着新生产力的获得……人们也就会改变自己的一切社会关系"这段话表明科学技术是（   ）。', options: ['A.历史上起推动作用的革命力量', 'B.历史变革中的唯一决定性力量', 'C.推动生产方式变革的重要力量', 'D.一切社会变革中的自主性力量'], answer: ['A', 'C'], explanation: '历史上起推动作用的革命力量；推动生产方式变革的重要力量。' },
+    { id: 5, type: 'multiple', content: '历史经验表明，经济危机往往孕育着新的科技革命。1857年的世界经济危机引发了电气革命，推动人类社会从蒸汽时代进入电气时代。1929年的世界经济危机引发了电子革命，推动人类社会从电气时代进入电子时代。由此证明（   ）。', options: ['A.科技革命是摆脱社会危机的根本出路', 'B.科学技术是社会形态更替的根本标志', 'C.社会实践的需要是科技发展的强大动力', 'D.科技创新能够推动社会经济跨越式发展'], answer: ['C', 'D'], explanation: '社会实践的需要是科技发展的强大动力；科技创新能够推动社会经济跨越式发展。' },
+    { id: 6, type: 'multiple', content: '"历史不过是追求着自己目的的人的活动而已"，这一观点表明的含义是（    ）。', options: ['A.人们自己创造自己的历史', 'B.历史不是神创造的', 'C.历史是人们任意创造的', 'D.历史是人的思想发展史'], answer: ['A', 'B'], explanation: '人们自己创造自己的历史；历史不是神创造的。' },
+    { id: 7, type: 'multiple', content: '作家史铁生在《奶奶的星星》中讲道，奶奶告诉他的故事与通常的说法不同：一般人说，地上死一个人，天上就熄灭了一颗星星；而奶奶说，地上死一个人，天上又多了一个星星，人死了就会升到天空，变成星星给走夜道的人照个亮了。于是他“慢慢相信，每一个活过的人，都能给后人的路途上添些光亮，也许是一颗巨星，也许是一把火炬，也许只是一支含泪的烛光……”这对我们理解个人在社会历史的作用的启示有（  ）。', options: ['A.历史是无数个人相互作用的合力的结果', 'B.杰出个人决定历史发展的走向', 'C.人人都是历史的创造者', 'D.每个人对社会发展都有或大或小的作用'], answer: ['A', 'D'], explanation: '历史是无数个人相互作用的合力的结果；每个人对社会发展都有或大或小的作用。' },
+    { id: 8, type: 'multiple', content: '唯物史观第一次科学地解决了历史创造者的问题，认为人民群众是历史的创造者。人民群众（    ）。', options: ['A.从量上说是指社会人口中的绝大多数', 'B.从质上说是指一切对社会历史发展起推动作用的人们', 'C.在任何历史时期都不包括剥削阶级', 'D.最稳定的主体部分始终是从事物质资料生产的劳动群众及其知识分子'], answer: ['A', 'B', 'D'], explanation: '从量上说是指社会人口中的绝大多数；从质上说是指一切对社会历史发展起推动作用的人们；最稳定的主体部分始终是从事物质资料生产的劳动群众及其知识分子。' },
+    { id: 9, type: 'multiple', content: '马克思主义从必然性和偶然性的辩证统一中理解杰出人物的历史作用，认为（   ）。', options: ['A.杰出人物能够改变历史发展的基本方向', 'B.杰出人物的历史作用受到一定历史条件的制约', 'C.杰出人物历史作用的形成和发挥与其服务人民群众的意愿密不可分', 'D.杰出人物们因其智慧性格因素对社会进程发生影响'], answer: ['B', 'C', 'D'], explanation: '杰出人物的历史作用受到一定历史条件的制约；杰出人物历史作用的形成和发挥与其服务人民群众的意愿密不可分；杰出人物们因其智慧性格因素对社会进程发生影响。' },
+    { id: 10, type: 'multiple', content: '2015年10月14日，新华社刊发了习近平2014年10月15日在文艺座谈会上的讲话全文。习近平主席在讲话中多次引用古文诗句，寓意深远、精准传神，例如“文章合为时而著，歌诗合为事而作”“诗文随世运，无日不趋新”“文变染乎世情，兴废系乎时序”等。这些诗句蕴含的哲理有（    ）。', options: ['A.社会存在是社会意识内容的客观来源', 'B.社会意识是具体的、历史的', 'C.随着社会存在的发展，社会意识也相应地或迟或早地发生变化和发展', 'D.社会意识始终对社会发展起着积极的促进作用'], answer: ['A', 'B', 'C'], explanation: '社会存在是社会意识内容的客观来源；社会意识是具体的、历史的；随着社会存在的发展，社会意识也相应地或迟或早地发生变化和发展。' },
+    { id: 11, type: 'multiple', content: '2023年10月8日， 习近平总书记对宣传思想文化工作作出重要指示指出，宣传思想文化工作事关党的前途命运，事关国家长治久安，事关民族凝聚力和向心力，是一项极端重要的工作。从唯物史观的角度分析，宣传思想文化工作之所以重要是因为（    ）。', options: ['A.社会意识与社会存在的发展是完全同步的', 'B.先进的社会意识可以对社会发展起积极的促进作用', 'C.正确而充分地发挥社会意识的能动作用，有赖于社会文化建设特别是先进文化的建设', 'D.社会意识的发展决定社会存在的发展'], answer: ['B', 'C'], explanation: '先进的社会意识可以对社会发展起积极的促进作用；正确而充分地发挥社会意识的能动作用，有赖于社会文化建设特别是先进文化的建设。' },
+    { id: 12, type: 'multiple', content: '人类社会是不断发展的，社会的根本性变革和进步是通过社会形态的更替实现的。社会形态的更替具有如下特征（   ）。', options: ['A.社会形态的更替是统一性和多样性的统一', 'B.社会形态的更替是必然性和人们的历史选择性的统一', 'C.社会形态的更替是前进性和曲折性的统一', 'D.社会形态的更替是顺序性和跨越性的统一'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 13, type: 'multiple', content: '各种经济时代的区别，不在于生产什么，而在于怎样生产，用什么劳动资料生产。劳动资料不仅是人类劳动力发展的测量器，而且是劳动借以进行的社会关系的指示器。马克思在《资本论》中的这段话表达的观点是（  ）。', options: ['A.劳动资料是测量生产力的客观尺度', 'B.劳动资料是生产关系的指示器', 'C.劳动资料是划分不同经济发展阶段的指标', 'D.生产方式区分不同的经济时代'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 14, type: 'multiple', content: '在新时代中国特色社会主义建设中，强调生态文明建设的重要性，这与唯物史观中关于人与自然关系的（  ）相契合。', options: ['A. 人与自然的关系是征服与被征服的关系', 'B. 人与自然的关系应该是和谐共生的关系', 'C. 人类社会的发展可以无视自然环境的限制', 'D. 人类社会的发展必须尊重自然规律'], answer: ['B', 'D'], explanation: '人与自然的关系应该是和谐共生的关系；人类社会的发展必须尊重自然规律。' },
+    { id: 15, type: 'multiple', content: '改革是一定社会为了解决社会基本矛盾而对（ ）进行的深刻改变和革新。', options: ['A. 生产力', 'B. 社会基本制度', 'C.生产关系', 'D.上层建筑'], answer: ['B','C', 'D'], explanation: '社会基本制度；生产关系；上层建筑。' },
+    { id: 16, type: 'multiple', content: '下列属于社会意识形态的有（ ）。', options: ['A．唯物史观', 'B.自然科学', 'C. 儒家思想', 'D. 社会主义法制'], answer: ['A', 'C'], explanation: '唯物史观；儒家思想。' }
+];
+
+// 第四章单选题 - 完整27题
+const chapter4Questions = [
+    { id: 1, type: 'choice', content: '加快资本周转可以增加年剩余价值量和提高年剩余价值率，根本原因是（    ）。', options: ['A.预付的资本总量增加了', 'B.实际发挥作用的可变资本增加了', 'C.流通对生产的反作用', 'D.剩余价值率提高了'], answer: 'B', explanation: '实际发挥作用的可变资本增加了。' },
+    { id: 2, type: 'choice', content: '决定劳动力价值的因素中一般不包括（     ）。', options: ['A.生存资料的价值', 'B.生产资料的价值', 'C.延续和养育后代所需的费用', 'D.必要的教育培训费用'], answer: 'B', explanation: '生产资料的价值。' },
+    { id: 3, type: 'choice', content: '商品经济是以交换为目的而进行生产的经济形式，它是一定社会历史条件的产物。在以私有制为基础的商品经济中，作为其他一切矛盾基础的矛盾是（     ）。', options: ['A.简单劳动和复杂劳动的矛盾', 'B.私人劳动和社会劳动的矛盾', 'C.具体劳动和抽象劳动的矛盾', 'D.必要劳动和剩余劳动的矛盾'], answer: 'B', explanation: '私人劳动和社会劳动的矛盾。' },
+    { id: 4, type: 'choice', content: '劳动力商品的价值是由（    ）。', options: ['A.生产和再生产劳动力商品所需要的社会必要劳动时间决定的', 'B.生理、道德和社会因素决定的', 'C.无产阶级和资产阶级的力量对比决定的', 'D.劳动力自身生存和繁衍后代所需要的生活资料价值决定的'], answer: 'A', explanation: '生产和再生产劳动力商品所需要的社会必要劳动时间决定的。' },
+    { id: 5, type: 'choice', content: '商品具有使用价值和价值两个因素或两种属性，是使用价值和价值的矛盾统一体。决定商品交换的比例的，不是商品的使用价值，而是价值，这是因为（    ）。', options: ['A.使用价值无法衡量', 'B.价值在质上是相同的', 'C.使用价值和价值二者不可兼得', 'D.价值是交换价值的物质承担者'], answer: 'B', explanation: '价值在质上是相同的。' },
+    { id: 6, type: 'choice', content: '劳动产品和商品的关系是（  ）。', options: ['A.劳动产品一定是商品', 'B.商品一定是劳动产品', 'C.劳动产品和商品都具有使用价值和价值', 'D.两者都要经过交换才能进入消费领域'], answer: 'B', explanation: '商品一定是劳动产品。' },
+    { id: 7, type: 'choice', content: '马克思指出："如果物没有用，那么其中包含的劳动也就没有用，不能算作劳动，因此不形成价值。"这段话说明（  ）。', options: ['A.价值的存在以物的有用性为前提', 'B.价值的存在与物的有用性互为前提', 'C.只要物是有用的，它就有价值', 'D.物越是有用就越有价值'], answer: 'A', explanation: '价值的存在以物的有用性为前提。' },
+    { id: 8, type: 'multiple', content: '电子商务的发展，对加快资本周转速度起着重要作用，体现在缩短（  ）。', options: ['A.资本由货币资本转化为生产资本的时间', 'B.资本由商品资本转化为货币资本的时间', 'C.原材料的储备时间', 'D.劳动者加工劳动对象的时间'], answer:  ['A', 'B', 'C'], explanation: '资本由货币资本转化为生产资本的时间'},
+    { id: 9, type: 'choice', content: '在商品经济条件下，解决私人劳动和社会劳动之间矛盾的唯一途径是（   ）。', options: ['A.按劳分配', 'B.扩大再生产', 'C.经济危机', 'D.商品交换'], answer: 'D', explanation: '商品交换。' },
+    { id: 10, type: 'choice', content: '在其他条件不变的情况下，随着社会劳动生产率提高而提高的是（    ）。', options: ['A.单个商品的价值量', 'B.单位时间的价值量', 'C.单位时间生产的商品数量', 'D.单个商品的社会必要劳动时间'], answer: 'C', explanation: '单位时间生产的商品数量。' },
+    { id: 11, type: 'choice', content: '消费者的下列经济行为中，属于货币执行价值尺度职能的是（    ）。', options: ['A.缴纳房屋契税9000元', 'B.购买商品房，合同约定房价30万元', 'C.在装饰材料市场现购材料5万元', 'D.按购房合同约定，第二年付房款10万元'], answer: 'B', explanation: '购买商品房，合同约定房价30万元。' },
+    { id: 12, type: 'choice', content: '资本家提高对工人剥削程度的最基本的方法有两种，即绝对剩余价值的生产和相对剩余价值的生产。绝对剩余价值的生产和相对剩余价值的生产都是依靠（    ）。', options: ['A.延长工作日获得的', 'B.提高劳动生产率获得的', 'C.减少工人的必要劳动时间获得的', 'D.延长工人的剩余劳动时间获得的'], answer: 'D', explanation: '延长工人的剩余劳动时间获得的。' },
+    { id: 13, type: 'choice', content: '在其他条件不变的情况下，以下选项中会提高资本有机构成的是（  ）。', options: ['A.生产所用的原材料价格上涨', 'B.自动化程度提高导致的裁员', 'C.劳动者接受教育和训练所支出的费用增加', 'D.为追求更多利润而增加工人的劳动时间'], answer: 'B', explanation: '自动化程度提高导致的裁员。' },
+    { id: 14, type: 'choice', content: '资本主义制度下的工资之所以掩盖了资本主义剥削关系，是因为（     ）。', options: ['A.工资表现为"劳动的价格"', 'B.工资表现为劳动力的价值', 'C.工资模糊了个别劳动时间和社会必要劳动时间的界限', 'D.工资的价值只计算了转移到新产品中去的那一部分'], answer: 'A', explanation: '工资表现为"劳动的价格"。' },
+    { id: 15, type: 'choice', content: '资本主义经济危机爆发的根本原因是资本主义的基本矛盾。经济危机在形式上的可能性首先是由（    ）。', options: ['A.社会的绝对的消费能力引起的', 'B.货币作为流通手段和支付手段引起的', 'C.商品价格和价值之间量的不一致引起的', 'D.社会总产品两大部类比例失衡引起的'], answer: 'B', explanation: '货币作为流通手段和支付手段引起的。' },
+    { id: 16, type: 'choice', content: '商品经济与自然经济是社会经济的两种基本形态，其最大区别在于，商品经济（  ）。', options: ['A.以交换为目的', 'B.以使用价值为生产目的', 'C.所有制是私有制', 'D.所有制是公有制'], answer: 'A', explanation: '以交换为目的。' },
+    { id: 17, type: 'choice', content: '任何一种生产商品的劳动，一方面是特殊的具体劳动，另一方面又是一般的抽象劳动，这就是劳动的二重性。在资本主义生产过程中，工人的劳动作为具体劳动，它（    ）。', options: ['A.创造商品的价值', 'B.转移劳动自身的价值', 'C.创造劳动力自身的价值', 'D.转移生产资料的价值'], answer: 'D', explanation: '转移生产资料的价值。' },
+    { id: 18, type: 'choice', content: '马克思在《资本论》中写道："实际上，在商品市场同货币所有者对立的不是劳动，而是工人。"这说明资本家购买的是（     ）。', options: ['A.工人的劳动', 'B.工人的人身自由', 'C.工人的劳动能力', 'D.工人的消费能力'], answer: 'C', explanation: '工人的劳动能力。' },
+    { id: 19, type: 'choice', content: '资本主义的生产过程具有两重性。其中，作为资本主义生产过程的主要方面的是（    ）。', options: ['A.价值增殖过程', 'B.补偿劳动力的价值形成过程', 'C.资本家监督下的劳动过程', 'D.创造出满足人们某种需要的使用价值的过程'], answer: 'A', explanation: '价值增殖过程。' },
+    { id: 20, type: 'choice', content: '资本在资本主义生产过程中采取生产资料和劳动力两种形态，马克思将资本区分为不变资本与可变资本的根据是（     ）。', options: ['A.资本不同部分在剩余价值生产中的不同作用', 'B.资本不同部分在周转中的不同方式', 'C.资本在循环中的不同职能', 'D.资本不同部分的物质形态是否改变'], answer: 'A', explanation: '资本不同部分在剩余价值生产中的不同作用。' },
+    { id: 21, type: 'choice', content: '某资本家经营的企业通过改进技术、提高劳动生产率，使其生产商品花费的劳动时间比社会必要劳动时间少10%，由此形成商品个别价值低于社会价值的那部分是（    ）。', options: ['A.超额剩余价值', 'B.绝对剩余价值', 'C.相对剩余价值', 'D.剩余价值'], answer: 'A', explanation: '超额剩余价值。' },
+    { id: 22, type: 'choice', content: '随着资本主义大工业的出现和发展，价值规律的实现形式也发生了变化，商品不再以价值而是以生产价格为基础进行交换。作为商品价值的转化形式，生产价格是（    ）。', options: ['A.生产成本与平均利润之和', 'B.生产中实际耗费的不变资本和可变资本之和', 'C.商品价值与劳动力成本之和', 'D.所用资本和所费资本之和'], answer: 'A', explanation: '生产成本与平均利润之和。' },
+    { id: 23, type: 'choice', content: '社会生产是连续不断地进行的，这种连续不断重复的生产就是再生产。社会再生产的核心问题是（    ）。', options: ['A.两大部类在总量上的比例问题', 'B.社会总产品的价值补偿和实物补偿问题', 'C.工资与剩余价值的分配问题', 'D.劳动过程和价值增值过程的统一问题'], answer: 'B', explanation: '社会总产品的价值补偿和实物补偿问题。' },
+    { id: 24, type: 'choice', content: '资本主义国家的对外职能是（     ）。', options: ['A.国家对内政治统治职能的延伸', 'B.社会管理职能的延伸', 'C.国家对内政治统治职能的保障', 'D.国家对内政治统治职能的强化'], answer: 'A', explanation: '国家对内政治统治职能的延伸。' },
+    { id: 25, type: 'choice', content: '资本主义社会资本再生产的周期一般包括四个阶段，下列哪个阶段是必经的基本阶段（  ）。', options: ['A.危机', 'B.萧条', 'C.复苏', 'D.高涨'], answer: 'A', explanation: '危机。' },
+    { id: 26, type: 'choice', content: '下述哪一种剥削带有一定的隐蔽性（  ）。', options: ['A.奴隶与生产资料的结合是以剥削者对被剥削者的完全人身占有为基础的。', 'B.封建主对农民进行残酷的剥削，农民与土地的结合是以农民对封建主的人身依附为条件的。', 'C.资本的原始积累，一是用暴力手段剥夺农民的土地，二是用暴力手段掠夺货币财富。', 'D.资本家与雇佣工人的关系，是基于劳动者人身自由的"平等"关系。'], answer: 'D', explanation: '资本家与雇佣工人的关系，是基于劳动者人身自由的"平等"关系。' },
+    { id: 27, type: 'choice', content: '马克思主义政治经济学是经济学上的一场深刻革命，它站在无产阶级立场，运用辩证唯物主义和历史唯物主义的科学方法，批判继承了英国古典政治经济学的合理成分，揭露了无产阶级与 资产阶级之间阶级对立和斗争的经济根源，论证了资本主义必然灭亡和社会主义必然胜利的客观规律。马克思经济学说的核心内容和基石是（   ）', options: ['A. 劳动二重性理论', 'B. 商品二因素理论', 'C. 剩余价值理论', 'D. 资本有机构成理论'], answer: 'C', explanation: '剩余价值理论。' }
+];
+
+// 第四章多选题 - 完整13题
+const chapter4MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '商品价值和交换价值的关系是（  ）。', options: ['A.价值是交换价值的内容和基础', 'B.交换价值是价值的内容和基础', 'C.交换价值是价值的表现形式', 'D.价值是交换价值的表现形式'], answer: ['A', 'C'], explanation: '价值是交换价值的内容和基础；交换价值是价值的表现形式。' },
+    { id: 2, type: 'multiple', content: '人们往往将汉语中的"价""值"二字与金银财宝等联系起来，而这两字的偏旁却都是"人"，示意价值在"人"。马克思的劳动价值论透过商品交换的物与物的关系，揭示了商品价值的科学内涵，其主要观点有（    ）。', options: ['A.劳动是社会财富的唯一源泉', 'B.具体劳动是商品价值的实体', 'C.价值是凝结在商品中的一般人类劳动', 'D.价值在本质上体现了生产者之间的社会关系'], answer: ['C', 'D'], explanation: '价值是凝结在商品中的一般人类劳动；价值在本质上体现了生产者之间的社会关系。' },
+    { id: 3, type: 'multiple', content: '商品经济产生的条件是（   ）。', options: ['A.商品的出现', 'B.社会分工', 'C.生产资料和劳动者属于不同的所有者', 'D.生产力发展'], answer: ['B', 'C'], explanation: '社会分工；生产资料和劳动者属于不同的所有者。' },
+    { id: 4, type: 'multiple', content: '马克思创立的劳动二重性理论具有重大意义，是因为（  ）。', options: ['A.它是建立科学劳动价值论的坚实基础', 'B.它是剩余价值理论建立的重要基础', 'C.它是划分不变资本和可变资本的根据', 'D.它是理解资本积累、资本有机构成、资本再生产等理论的钥匙'], answer: ['A', 'B', 'D'], explanation: '它是建立科学劳动价值论的坚实基础；它是剩余价值理论建立的重要基础；它是理解资本积累、资本有机构成、资本再生产等理论的钥匙' },
+    { id: 5, type: 'multiple', content: '5.美国导演迈克尔 穆尔在他的最新纪录片《资本主义：一个爱情故事》问世以来，一直颇受关注。“资本主义”为何与“爱情故事”联系起来呢？穆尔解释说，这是一种“贪欲之爱”，喜欢财富的人不仅爱他们自己的钱，也爱你口袋中的钱……很多人不敢说出它的名字，真见鬼，就说出来吧。这就是“资本主义”。对金钱的“贪欲”与资本主义连为一体，是因为（  ）。', options: ['A.资本家就是人格化的资本', 'B.赚钱体现了人的天然本性', 'C.资本的生命在于不断运动和不断增殖', 'D.追逐剩余价值是资本主义生产方式的绝对规律'], answer: ['A', 'C', 'D'], explanation: '资本家就是人格化的资本；资本的生命在于不断运动和不断增殖；追逐剩余价值是资本主义生产方式的绝对规律。' },
+    { id: 6, type: 'multiple', content: '有一则寓言讲道：狐狸把鱼汤盛在平底的盘子里，请仙鹤来和它一起“平等”的喝鱼汤，结果仙鹤一点也没喝到，全被狐狸喝去了。这个寓言给人们的启示是，尽管资产阶级宣布“法律面前人人平等”，但是 （  ）。', options: ['A.法律名义上的平等掩盖着事实上的不平等', 'B.这种形式上的平等即资本主义制度的实质', 'C.它的实质是将劳资之间经济利益的不平等合法化', 'D.这种平等的权利是建立在财产不平等基础之上的权利'], answer: ['A', 'C', 'D'], explanation: '法律名义上的平等掩盖着事实上的不平等；它的实质是将劳资之间经济利益的不平等合法化；这种平等的权利是建立在财产不平等基础之上的权利。' },
+    { id: 7, type: 'multiple', content: '在资本主义条件下，资本变成了一种非常神秘的东西，似乎劳动的一切社会生产力并非劳动本身所有，而为资本所有，资本本身就具有一种能使价值增殖的魔力，这就是资本拜物教。马克思通过对劳动力商品的特点和资本总公式的矛盾的分析，阐明了资本的实质，揭露了资本拜物教产生的秘密。以下对资本认识正确的是（  ）。', options: ['A.可以带来剩余价值的价值', 'B.是剩余价值产生的源泉', 'C.根据在剩余价值生产过程中的作用不同区分为不变资本和可变资本', 'D.在资本主义生产过程中采取生产资料和劳动力两种形态'], answer: ['A', 'C', 'D'], explanation: '可以带来剩余价值的价值；根据在剩余价值生产过程中的作用不同区分为不变资本和可变资本；在资本主义生产过程中采取生产资料和劳动力两种形态。' },
+    { id: 8, type: 'multiple', content: '资本主义的生产过程是（   ）。', options: ['A.生产物质资料的劳动过程', 'B.价值增殖过程', 'C.物质资料再生产过程', 'D.资本主义生产关系再生产'], answer: ['A', 'B'], explanation: '全部正确。' },
+    { id: 9, type: 'multiple', content: '资本的本质是（     ）。', options: ['A.能够带来剩余价值的价值', 'B.物所掩盖的生产关系', 'C.在不断运动中增殖的价值', 'D.一个历史范畴'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 10, type: 'multiple', content: '美国《纽约时报》和全国广播公司联合进行的一次调查显示，至少84%的选民认为，如今的美国选举中流入了“太多金钱”；85%的选民认为，除非改革或彻底重建美国的选举制度，否则无法改变“金钱政治”的状况。就连美国前总统卡特也承认：“无限制的政治贿赂成为提名总统候选人或当选总统的主要影响因素”，美国的“政治体系已遭到颠覆，它只是用来为主要的献金者提供回报”。资本主义的民主是金钱操纵下的民主，除此之外，资本主义政治制度的局限性还包括（  ）。', options: ['A.资本主义的民主实际是资产阶级精英统治下的民主', 'B.法律名义上的平等掩盖着事实上的不平等', 'C.多党制是资产阶级选择自己的国家管理者，实现其内部利益平衡的政治机制', 'D.政党恶斗相互掣肘，决策效率低下，激化社会矛盾'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 11, type: 'multiple', content: '关于资本主义意识形态，下列说法正确的是（）。', options: ['A.主要是私有制神圣不可侵犯观念和个人主义价值观。', 'B."赋予自己的思想以普遍性的形式"，把它们描绘成唯一合乎理性的、有普遍意义的思想"。', 'C.包含着人类文明进步的成就，特别是那些文艺复兴时期和资产阶级革命时期的资产阶级思想理论和观念。', 'D.也具有极大的阶级的和历史的局限性。'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 12, type: 'multiple', content: '关于商品的价值量，下列说法是正确的有（ ）。', options: ['A.生产商品的个别劳动时间决定商品的价值量', 'B.社会必要劳动时间决定商品的价值量', 'C.劳动生产率水平越高单位商品的价值量越小', 'D.在相同的劳动时间里，复杂劳动创造的价值大于简单劳动创造的价值'], answer: ['B', 'C', 'D'], explanation: '社会必要劳动时间决定商品的价值量；劳动生产率水平越高单位商品的价值量越小；在相同的劳动时间里，复杂劳动创造的价值大于简单劳动创造的价值。' },
+    { id: 13, type: 'multiple', content: '关于资本主义的本质特征，下列说法正确的有（  ）', options: ['A．资本家通过占有剩余价值实现利润积累', 'B. 资本主义生产关系以雇佣劳动为基础', 'C. 资本主义制度下劳动者掌握生产资料', 'D. 资本主义制度下资本家掌握生产资料'], answer: ['A', 'B', 'D'], explanation: '资本家通过占有剩余价值实现利润积累；资本主义生产关系以雇佣劳动为基础；资本主义制度下资本家掌握生产资料。' }
+];
+
+// 第五章单选题 - 完整14题
+const chapter5Questions = [
+    { id: 1, type: 'choice', content: '金融资本是由（     ）。', options: ['A.产业资本和商业资本融合或混合生长而成的', 'B.银行资本和工业资本融合或混合生长而成的', 'C.工业垄断资本和银行垄断资本融合在一起而形成的', 'D.垄断银行资本和银行资本融合或混合生长的'], answer: 'C', explanation: '工业垄断资本和银行垄断资本融合在一起而形成的。' },
+    { id: 2, type: 'choice', content: '第二次世界大战后，发达资本主义国家的发展进入国家垄断资本主义的新阶段，这意味着（     ）。', options: ['A.发达资本主义国家的政府担当调控国家宏观经济的重要职能', 'B.国家垄断资本掌控经济生活', 'C.所有重要的经济部门实行国有化', 'D.国家垄断重于私人垄断'], answer: 'A', explanation: '发达资本主义国家的政府担当调控国家宏观经济的重要职能。' },
+    { id: 3, type: 'choice', content: '国家垄断资本主义的根本特征是（     ）。', options: ['A.国私共有的垄断资本', 'B.国有企业的存在', 'C.私人垄断资本的主导地位', 'D.国家对经济的干预和调节'], answer: 'D', explanation: '国家对经济的干预和调节。' },
+    { id: 4, type: 'choice', content: '20世纪70年代以来，西方资本主义国家的金融资本急剧膨胀，这一方面促进了资本主义的发展，另一方面也造成了经济过度虚拟化，致使金融危机频繁发生。西方资本主义金融资本快速发展壮大的重要制度条件是（    ）。', options: ['A.金融自由化与金融创新', 'B.技术创新与大力发展互联网金融', 'C.全面私有化与放松金融监管', 'D.去工业化与大力发展现代服务业'], answer: 'A', explanation: '金融自由化与金融创新。' },
+    { id: 5, type: 'choice', content: '国家垄断资本主义的产生和发展，从根本上说是（   ）。', options: ['A.国内市场竞争的结果', 'B.国际竞争激烈化的结果', 'C.垄断统治加强的结果', 'D.生产社会化和资本主义私人占有制之间矛盾发展的结果'], answer: 'D', explanation: '生产社会化和资本主义私人占有制之间矛盾发展的结果。' },
+    { id: 6, type: 'choice', content: '垄断资本向世界范围的扩展是通过（    ）这一国际垄断组织形式实现的。', options: ['A.国际卡特尔', 'B.混合联合企业', 'C.跨国公司', 'D.国际康采恩'], answer: 'C', explanation: '跨国公司。' },
+    { id: 7, type: 'choice', content: '在垄断资本主义的各个基本经济特征中最根本的特征是（      ）。', options: ['A.国家垄断同盟的形成', 'B.资本输出具有重要的意义', 'C.垄断在经济生活中占统治地位', 'D.瓜分世界领土，形成殖民体系'], answer: 'C', explanation: '垄断在经济生活中占统治地位。' },
+    { id: 8, type: 'choice', content: '资本主义由自由竞争阶段进入垄断阶段，最根本的标志在于（    ）', options: ['A.垄断代替自由竞争在经济生活中占统治地位', 'B.资本输出代替商品输出在经济生活中占统治地位', 'C.银行资本代替工业资本在经济生活中占统治地位', 'D.国家垄断代替私人垄断在经济生活中占统治地位'], answer: 'A', explanation: '垄断代替自由竞争在经济生活中占统治地位。' },
+    { id: 9, type: 'choice', content: '金融寡头实现经济上统治的"参与制"是指金融寡头（     ）。', options: ['A.直接参与工业企业的生产经营和管理', 'B.直接参与银行的经营和管理', 'C.通过掌握一定数量的股票来层层控制企业的制度', 'D.通过购买所属公司全部股票直接掌握许多大企业和大银行的经济统治的方式'], answer: 'C', explanation: '通过掌握一定数量的股票来层层控制企业的制度。' },
+    { id: 10, type: 'choice', content: '垄断资本主义国家的"经济计划化"（    ）。', options: ['A.可以从根本上解决资本主义基本矛盾', 'B.使生产的无政府状态得到一定的缓解', 'C.导致资本主义向社会主义和平过渡', 'D.可以消除资本主义经济危机'], answer: 'B', explanation: '使生产的无政府状态得到一定的缓解。' },
+    { id: 11, type: 'choice', content: '国家垄断资本主义的局限性在于（   ）。', options: ['A.使垄断资本主义存在着时而迅速发展时而停滞的趋势', 'B.使垄断资本主义经济长期处于停滞状态', 'C.使垄断资本主义经济长期处于滞胀状态', 'D.它只能暂时使某些矛盾缓和，但使这些矛盾进一步加深和复杂化'], answer: 'D', explanation: '它只能暂时使某些矛盾缓和，但使这些矛盾进一步加深和复杂化。' },
+    { id: 12, type: 'choice', content: '垄断资本主义国家的金融寡头在经济上的统治主要借助于（     ）。', options: ['A."代理制"', 'B."个人联合"', 'C."企业联合"', 'D."参与制"'], answer: 'D', explanation: '"参与制"。' },
+    { id: 13, type: 'choice', content: '第二次世界大战后，西方资本主义国家政治生活中十分引人注目的现象是（   ）。', options: ['A.改良主义政党在政治舞台上的影响日益扩大', 'B.工人阶级斗争的发展', 'C.新的社会阶层不断出现', 'D.资本家集团的变化'], answer: 'A', explanation: '改良主义政党在政治舞台上的影响日益扩大。' },
+    { id: 14, type: 'choice', content: '从世界范围来看，资本主义向社会主义过渡必将经历一个相当长的历史过程，其原因在于（    ）。', options: ['A.资本主义社会发展比较稳定', 'B.资本主义发展的不平衡性', 'C.社会主义仍然处于初级阶段', 'D.无产阶级力量比较弱小'], answer: 'B', explanation: '资本主义发展的不平衡性。' }
+];
+
+// 第五章多选题 - 完整13题
+const chapter5MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '垄断条件下竞争的特点包括（      ）。', options: ['A.竞争的目的是获得高额垄断利润', 'B.竞争的手段有非经济的手段', 'C.竞争更为激烈、破坏性更大', 'D.竞争的范围除经济领域外还包括政治、军事、文化领域'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 2, type: 'multiple', content: '国家垄断资本主义是国家政权和私人垄断资本融合在一起的垄断资本主义。第二次世界大战结束以来，在国家垄断资本主义获得充分发展的同时，资本主义国家通过宏观调节和微观规制对生产、流通、分配和消费各个环节的干预也更加深入。其中，微观规制的类型主要有（    ）。', options: ['A.公众生活规制', 'B.公共事业规制', 'C.社会经济规制', 'D.反托拉斯法'], answer: ['B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 3, type: 'multiple', content: '经济全球化的表现是（     ）。', options: ['A.生产全球化', 'B.贸易全球化', 'C.金融全球化', 'D.企业生产经营全球化'], answer: ['A', 'B', 'C'], explanation: '全部正确。' },
+    { id: 4, type: 'multiple', content: '国家垄断资本主义对资本主义经济发展的作用包括（      ）。', options: ['A.在一定程度上促进了社会生产力的发展', 'B.解决了垄断资本主义内在矛盾的深化与尖锐', 'C.从根本上解决了失业问题', 'D.调节经济过程和经济活动，突破私人垄断资本的狭隘界限'], answer: ['A', 'D'], explanation: '在一定程度上促进了社会生产力的发展；调节经济过程和经济活动，突破私人垄断资本的狭隘界限。' },
+    { id: 5, type: 'multiple', content: '第二次世界大战后，由于多种社会因素的影响，资本主义发生了一系列变化。其中就包含劳资关系和分配关系的变化，那么资本家及其代理人采取的一些缓和劳资关系的激励制度包括（    ）。', options: ['A.职工参与决策制度', 'B.职工终身雇佣制度', 'C.职工选举管理制度', 'D.职工持股制度'], answer: ['A', 'B', 'D'], explanation: '职工参与决策制度；职工终身雇佣制度；职工持股制度。' },
+    { id: 6, type: 'multiple', content: '第二次世界大战后，资本主义经济政治都发生了新变化。这些变化主要表现在以下几个方面（      ）。', options: ['A.生产资料所有制的变化', 'B.劳资关系和分配关系的变化', 'C.社会阶层和阶级结构的变化', 'D.经济调节机制和经济危机形态的变化'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 7, type: 'multiple', content: '关于社会主义代替资本主义是一个长期的历史过程的理论，习近平指出马克思、恩格斯理论的两个"没有过时"的观点，分别是（   ）。', options: ['A.关于资本主义社会基本矛盾的分析没有过时', 'B.关于生产力决定生产关系的历史唯物主义观点没有过时', 'C.关于资本主义必然消亡、社会主义必然胜利的历史唯物主义观点没有过时', 'D.关于资本家无偿占有工人的劳动的剩余价值的观点没有过时'], answer: ['A', 'C'], explanation: '关于资本主义社会基本矛盾的分析没有过时；关于资本主义必然消亡、社会主义必然胜利的历史唯物主义观点没有过时。' },
+    { id: 8, type: 'multiple', content: '资本主义的历史进步性并不能掩盖自身的局限性，其表现是（  ）。', options: ['A.资本主义基本矛盾阻碍社会生产力的发展', 'B.资本主义制度下财富占有两极分化，引发经济危机', 'C.资本家阶级支配和控制资本主义经济和政治运行，不断激化社会矛盾和冲突', 'D.资本追求剩余价值的内在动力和竞争的外在压力推动了社会生产力的迅速发展'], answer: ['A', 'B', 'C'], explanation: '资本主义基本矛盾阻碍社会生产力的发展；资本主义制度下财富占有两极分化，引发经济危机；资本家阶级支配和控制资本主义经济和政治运行，不断激化社会矛盾和冲突。' },
+    { id: 9, type: 'multiple', content: '资本主义向社会主义的过渡必然是一个复杂的、长期的历史过程。原因是（     ）。', options: ['A.任何社会形态的存在都有相对稳定性，从产生到衰亡都要经过相当长的过程', 'B.资本主义发展的不平衡性决定了过渡的长期性', 'C.当代资本主义的发展，还显示出生产关系对生产力容纳的空间', 'D.当代资本主义的社会保障愈发完善，显示出资本主义制度的优越性'], answer: ['A', 'B', 'C'], explanation: '任何社会形态的存在都有相对稳定性，从产生到衰亡都要经过相当长的过程；资本主义发展的不平衡性决定了过渡的长期性；当代资本主义的发展，还显示出生产关系对生产力容纳的空间。' },
+    { id: 10, type: 'multiple', content: '2020年以来，新冠肺炎疫情这类全球性重大公共卫生事件对经济全球化产生一定的冲击，但若想人为切断各国经济的（    ）是不可能的，也是不符合历史潮流的。', options: ['A.资金流', 'B.技术流', 'C.产品流', 'D.人员流'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 11, type: 'multiple', content: '“面对经济全球化大势，像鸵鸟一样把头埋在沙里假装视而不见，或像堂吉诃德一样挥舞长矛加以抵制，都违背了历史规律。” 新冠肺炎疫情导致全球供应链产业链遭受巨大冲击，加上国际环境发生新变化，经济全球化遭遇逆流。面对这一冲击和挑战，我们不能回避，要处理好（    ）使发展既平衡又充分，发展成果公平惠及不同国家不同阶层不同人群。', options: ['A.政府和市场的关系', 'B.公平和效率的关系', 'C.增长和分配的关系', 'D.技术和就业的关系'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 12, type: 'multiple', content: '金融寡头的统治主要是通过（  ）。', options: ['A.在经济领域通过"参与制"实现的', 'B.通过掌握一定数量的股票来层层控制企业', 'C.在政治领域通过同政府的"个人联合"来实现的', 'D.直接出马或者把自己的代理人送进政府和议会'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 13, type: 'multiple', content: '垄断高价和垄断低价并不否定价值规律，因为（  ）。', options: ['A.垄断价格只是使价值规律改变了表现形式', 'B.垄断高价和垄断低价不能完全离开商品的价值', 'C.从整个社会看，商品的价格总额和价值总额是一致的', 'D.垄断高价是把其他商品生产者的一部分利润转移到垄断高价的商品上'], answer: ['A', 'B', 'C', 'D'], explanation: '垄断价格只是使价值规律改变了表现形式；垄断高价和垄断低价不能完全离开商品的价值；从整个社会看，商品的价格总额和价值总额是一致的。' }
+];
+
+// 第六章单选题 - 完整9题
+const chapter6Questions = [
+    { id: 1, type: 'choice', content: '社会主义实现由空想到科学发展的标志是（  ）。', options: ['A.《共产党宣言》的发表', 'B."共产主义者同盟"的建立', 'C.空想社会主义理想的破灭', 'D.俄国十月革命的胜利'], answer: 'A', explanation: '《共产党宣言》的发表。' },
+    { id: 2, type: 'choice', content: '列宁对关于无产阶级社会主义革命学说的重大贡献是（  ）。', options: ['A.提出了战时共产主义政策', 'B.提出了新经济政策', 'C.提出了社会主义革命将首先在一国或数国取得胜利的理论', 'D.提出了利用国家资本主义过渡到社会主义的理论'], answer: 'C', explanation: '提出了社会主义革命将首先在一国或数国取得胜利的理论。' },
+    { id: 3, type: 'choice', content: '列宁说："如果社会主义在经济上尚未成熟，任何起义也创造不出社会主义来"。这就是说（  ）。', options: ['A.社会主义革命只能在经济发达的国家发生', 'B.社会主义革命需要一定的物质前提', 'C.只能靠经济力量去实现社会主义', 'D.社会主义革命能够在资本主义内部自发产生'], answer: 'B', explanation: '社会主义革命需要一定的物质前提。' },
+    { id: 4, type: 'choice', content: '经济文化相对落后的国家可以先于资本主义国家进入社会主义，其根本原因是（  ）。', options: ['A.具有较高的精神文明', 'B.革命的客观形势和条件所决定的', 'C.以高度社会化的资本主义大生产作为物质前提', 'D.社会主义生产关系可以在旧社会的内部孕育生长'], answer: 'B', explanation: '革命的客观形势和条件所决定的。' },
+    { id: 5, type: 'choice', content: '社会主义政治制度的基本特征是（  ）。', options: ['A.坚持社会主义方向', 'B.无产阶级政党的领导', 'C.无产阶级专政的政权', 'D.马克思主义的指导'], answer: 'C', explanation: '无产阶级专政的政权。' },
+    { id: 6, type: 'choice', content: '下列关于社会主义发展及规律的认识，错误的是（   ）。', options: ['A.资本主义最终消亡，社会主义最终胜利，必然是个很长的历史过程', 'B.唯物史观和剩余价值学说是社会主义由空想变为科学的理论基石', 'C.中国特色社会主义制度推动着世界和平与发展的时代潮流', 'D.探索社会主义发展道路，必须充分吸收人类一切文明成果'], answer: 'C', explanation: '中国特色社会主义制度推动着世界和平与发展的时代潮流。' },
+    { id: 7, type: 'choice', content: '从空想社会主义诞生到《共产党宣言》问世，其间空想社会主义经历了330多年的发展历程。空想社会主义的开山之作是（    ）。', options: ['A.《太阳城》', 'B.《乌托邦》', 'C.《自然法典》', 'D.《论法制或法律的原则》'], answer: 'B', explanation: '《乌托邦》。' },
+    { id: 8, type: 'choice', content: '恩格斯指出："我认为，所谓\'社会主义社会\'不是一种一成不变的东西，而应当和任何其他社会制度一样，把它看成经常变化和改革的社会。"社会主义改革的根源是（    ）。', options: ['A.改革是社会主义社会发展的动力', 'B.社会生产力发展水平不够高', 'C.社会主义制度没有根本克服资本主义制度下生产力与生产关系的对抗性矛盾', 'D.社会主义社会的基本矛盾'], answer: 'D', explanation: '社会主义社会的基本矛盾。' },
+    { id: 9, type: 'choice', content: '科学社会主义之所以能够超越空想社会主义，是因为把争取无产阶级和全人类解放的斗争建立在（  ）。', options: ['A.暴力革命形式上', 'B.社会发展客观规律的基础上', 'C.批判空想社会主义', 'D.共产主义者同盟上'], answer: 'B', explanation: '社会发展客观规律的基础上。' }
+];
+
+// 第六章多选题 - 示例2题
+const chapter6MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '十月革命胜利后，为捍卫年轻的苏维埃政权，列宁领导的苏维埃政权从 1918 年夏到 1921年春实行了战时共产主义政策。战时共产主义政策是苏维埃俄国面临帝国主义武装干涉和国内战争而被迫采取的一种临时性政策。战时共产主义政策的主要内容有（    ）。 ', options: ['A.余粮收集制', 'B.取消商品货币关系', 'C.发展多种所有制', 'D.支持农民耕种自留地'], answer: ['A', 'B'], explanation: '余粮收集制；取消商品货币关系。' }
+];
+
+// 第七章单选题 - 完整10题
+const chapter7Questions = [
+    { id: 1, type: 'choice', content: '在展望未来社会的问题上，马克思主义与空想社会主义的根本区别是（      ）。', options: ['A.展望的内容是否正确', 'B.展望的目的和动机是否正确', 'C.有没有预见性', 'D.立场、观点和方法是否科学'], answer: 'D', explanation: '立场、观点和方法是否科学。' },
+    { id: 2, type: 'choice', content: '批判性和革命性是马克思主义的一个显著特征，"通过批判旧世界来发现新世界"是（     ）。', options: ['A.空想社会主义预见未来社会的方法', 'B.马克思主义预见未来社会的方法', 'C.唯物主义预见未来社会的方法', 'D.唯心主义预见未来社会的方法'], answer: 'B', explanation: '马克思主义预见未来社会的方法。' },
+    { id: 3, type: 'choice', content: '"代替那存在着阶级和阶级对立的资产阶级旧社会的，将是这样一个联合体，在那里，每个人的自由发展是一切人的自由发展的条件"这是（    ）。', options: ['A.《共产党宣言》中的一段话', 'B.《〈政治经济学批判〉序言》中的一段话', 'C.《哥达纲领批判》中的一段话', 'D.《资本论》中的一段话'], answer: 'A', explanation: '《共产党宣言》中的一段话。' },
+    { id: 4, type: 'choice', content: '"人的依赖性关系"是（      ）。', options: ['A.资本主义社会以前的人与人之间的关系', 'B.资本主义社会之中的人与人之间的关系', 'C.社会主义社会之中的人与人之间的关系', 'D.共产主义社会之中的人与人之间的关系'], answer: 'A', explanation: '资本主义社会以前的人与人之间的关系。' },
+    { id: 5, type: 'choice', content: '实现人的"自由个性"的发展，是（    ）。', options: ['A.资本主义社会以前的人的生存状态', 'B.资本主义社会之中的人的生存状态', 'C.社会主义社会之中的人的生存状态', 'D.共产主义社会之中的人的生存状态'], answer: 'D', explanation: '共产主义社会之中的人的生存状态。' },
+    { id: 6, type: 'choice', content: '自由王国是指人们（    ）。', options: ['A.处于绝对自由的原始社会状态', 'B.不再受自然规律和社会规律支配的状态', 'C.允许自由竞争的资本主义状态', 'D.摆脱了自然和社会关系的奴役，成为自己社会关系主人的状态'], answer: 'D', explanation: '摆脱了自然和社会关系的奴役，成为自己社会关系主人的状态。' },
+    { id: 7, type: 'choice', content: '共产主义理想之所以是能够实现的社会理想，是因为它是（   ）。', options: ['A.具有客观可能性的', 'B.人类向往的美好境界', 'C.具有客观必然性的', 'D.人类不断追求的目标'], answer: 'C', explanation: '具有客观必然性的。' },
+    { id: 8, type: 'choice', content: '在人的发展和社会发展的关系问题上，马克思主义认为（  ）。', options: ['A.前者是个人的理想，后者是社会的目标', 'B.前者体现了个人价值，后者体现了社会价值', 'C.前者和后者是彼此独立的历史发展过程', 'D.前者和后者互为前提和基础'], answer: 'D', explanation: '前者和后者互为前提和基础。' },
+    { id: 9, type: 'choice', content: '社会主义社会是共产主义社会的（  ），它与共产主义社会具有根本性质上的一致性。', options: ['A.高级阶段', 'B.萌芽阶段', 'C.发展阶段', 'D.初级阶段'], answer: 'D', explanation: '初级阶段。' },
+    { id: 10, type: 'choice', content: '马克思主义追求的根本价值目标和共产主义社会的根本特征是（    ）。', options: ['A.人对自然的征服', 'B.人的自由而全面的发展', 'C.人的个性的充分实现', 'D.劳动成为生活的第一需要'], answer: 'B', explanation: '人的自由而全面的发展。' }
+];
+
+// 第七章多选题 - 完整5题
+const chapter7MultipleQuestions = [
+    { id: 1, type: 'multiple', content: '马克思和恩格斯认为在共产主义社会将要消失的"三大差别"有： （  ）。', options: ['A.资产阶级和无产阶级的差别', 'B.工业和农业的差别', 'C.城市与乡村的差别', 'D.脑力劳动与体力劳动的差别'], answer: ['B', 'C', 'D'], explanation: '工业和农业的差别；城市与乡村的差别；脑力劳动与体力劳动的差别。' },
+    { id: 2, type: 'multiple', content: '下列选项属于人类解放含义的有： （    ）。', options: ['A.完全摆脱自然力和社会关系', 'B.获得绝对自由', 'C.从自然必然性奴役下解放出来', 'D.从社会必然性奴役下解放出来'], answer: ['C', 'D'], explanation: '从自然必然性奴役下解放出来；从社会必然性奴役下解放出来。' },
+    { id: 3, type: 'multiple', content: '社会主义在发展过程中出现了挫折和反复，这表明（   ）。', options: ['A.新生事物的成长不是一帆风顺的', 'B.事物发展的道路是螺旋式的上升', 'C.社会形态更替的斗争是长期的、复杂的', 'D.社会在发展过程中会出现挫折甚至倒退'], answer: ['A', 'B', 'C', 'D'], explanation: '全部正确。' },
+    { id: 4, type: 'multiple', content: '习近平指出：“当代中国的伟大社会变革，不是简单延续我国历史文化的母版，不是简单套用马克思主义经典作家设想的模板，不是其他国家社会主义实践的再版，也不是国外现代化发展的翻版，”这对我们理解科学社会主义一般原则的启示是（    ）。', options: ['A.科学社会主义绝不是一成不变的教条', 'B.科学社会主义与资本主义生产方式没有必然的联系', 'C.科学社会主义是人类优秀文化传统的历史延续', 'D.科学社会主义在不同的时代具有不同的内容和形式'], answer: ['A', 'C', 'D'], explanation: '科学社会主义绝不是一成不变的教条；科学社会主义是人类优秀文化传统的历史延续；科学社会主义在不同的时代具有不同的内容和形式。' },
+    { id: 5, type: 'multiple', content: '资本主义必然为社会主义所代替，并不意味着资本主义将在短期内自行消亡。资本主义向社会主义的过渡必然是一个复杂的、长期的历史进程，其原因在于（    ）。', options: ['A.资本主义社会具有一定的自我调节能力', 'B.资本主义的发展具有不平衡性', 'C.任何社会形态的存在都有绝对稳定性', 'D.当代资本主义的发展还显示出生产关系对生产力有容纳的空间'], answer: ['A', 'B', 'D'], explanation: '资本主义社会具有一定的自我调节能力；资本主义的发展具有不平衡性；当代资本主义的发展还显示出生产关系对生产力有容纳的空间。' }
+];
+
+// 章节配置
+const allQuestionsList = [
+    ...introQuestions,
+    ...introMultipleQuestions,
+    ...chapter1Questions,
+    ...chapter1MultipleQuestions,
+    ...chapter2Questions,
+    ...chapter2MultipleQuestions,
+    ...chapter3Questions,
+    ...chapter3MultipleQuestions,
+    ...chapter4Questions,
+    ...chapter4MultipleQuestions,
+    ...chapter5Questions,
+    ...chapter5MultipleQuestions,
+    ...chapter6Questions,
+    ...chapter6MultipleQuestions,
+    ...chapter7Questions,
+    ...chapter7MultipleQuestions
+];
+
+const chapters = [
+    {
+        id: 'random',
+        name: '🎲 随机答题(全部题目)',
+        questions: [...allQuestionsList],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'random20',
+        name: '🎲 随机答题(20题)',
+        questions: [],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'review',
+        name: '📖 复习背诵',
+        questions: [],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'intro',
+        name: '导论',
+        questions: [...introQuestions, ...introMultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter1',
+        name: '第一章 世界物质性及发展规律',
+        questions: [...chapter1Questions, ...chapter1MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter2',
+        name: '第二章 实践与认识及其发展规律',
+        questions: [...chapter2Questions, ...chapter2MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter3',
+        name: '第三章 人类社会及其发展规律',
+        questions: [...chapter3Questions, ...chapter3MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter4',
+        name: '第四章 资本主义的本质及规律',
+        questions: [...chapter4Questions, ...chapter4MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter5',
+        name: '第五章 资本主义的发展及其趋势',
+        questions: [...chapter5Questions, ...chapter5MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter6',
+        name: '第六章 社会主义的发展及其规律',
+        questions: [...chapter6Questions, ...chapter6MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    },
+    {
+        id: 'chapter7',
+        name: '第七章 共产主义崇高理想及其最终实现',
+        questions: [...chapter7Questions, ...chapter7MultipleQuestions],
+        stats: { correct: 0, wrong: 0, skip: 0, completed: false }
+    }
+];
+    </script>
+    <script>
+        let currentChapterIndex = 0;
+        let currentQuestionIndex = 0;
+        let selectedOptions = [];
+        let answered = false;
+        let randomQuizQuestions = [];
+        let randomQuizDetails = [];
+        let randomQuizStats = { correct: 0, wrong: 0, skip: 0 };
+        let reviewState = {
+            mode: 'answer', // 'answer' 显示答案, 'question' 仅显示题目
+            chapterFilter: 'all',
+            typeFilter: 'all', // 'all', 'choice', 'multiple'
+            currentPage: 1,
+            pageSize: 10,
+            filteredQuestions: []
+        };
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function getAllQuestions() {
+            return [...allQuestionsList];
+        }
+
+        function initChapterList() {
+            const chapterList = document.getElementById('chapterList');
+            chapterList.innerHTML = chapters.map((chapter, index) => `
+                <div class="chapter-btn ${index === currentChapterIndex ? 'active' : ''}" onclick="selectChapter(${index})">
+                    <div class="chapter-name">${chapter.name}</div>
+                    <div class="question-count">${chapter.questions.length} 题</div>
+                </div>
+            `).join('');
+        }
+
+        function selectChapter(index) {
+            currentChapterIndex = index;
+            currentQuestionIndex = 0;
+            selectedOptions = [];
+            answered = false;
+            initChapterList();
+
+            if (index === 0) {
+                // 全部题目随机
+                showRandomAllWelcome();
+            } else if (index === 1) {
+                // 20题随机
+                showRandomQuizWelcome();
+            } else if (index === 2) {
+                // 复习背诵
+                showReviewPage();
+            } else {
+                // 按章节答题
+                renderQuestion();
+            }
+        }
+
+        const chapterNameMap = {
+            3: '导论',
+            4: '第一章',
+            5: '第二章',
+            6: '第三章',
+            7: '第四章',
+            8: '第五章',
+            9: '第六章',
+            10: '第七章'
+        };
+
+        function showReviewPage() {
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header">
+                    <h1>📖 复习背诵模块</h1>
+                </div>
+                <div class="review-container">
+                    <div class="review-filters">
+                        <div style="display:flex;align-items:center;gap:10px;flex:1;">
+                            <span class="filter-label">章节筛选:</span>
+                            <button class="filter-select active" onclick="filterReviewChapter('all')">全部章节</button>
+                            <button class="filter-select" onclick="filterReviewChapter(3)">导论</button>
+                            <button class="filter-select" onclick="filterReviewChapter(4)">第一章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(5)">第二章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(6)">第三章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(7)">第四章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(8)">第五章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(9)">第六章</button>
+                            <button class="filter-select" onclick="filterReviewChapter(10)">第七章</button>
+                        </div>
+                        <div class="review-mode-toggle">
+                            <span class="filter-label">题型:</span>
+                            <button class="filter-select active" onclick="filterReviewType('all')" id="typeFilterAll">全部</button>
+                            <button class="filter-select" onclick="filterReviewType('choice')" id="typeFilterChoice">单选</button>
+                            <button class="filter-select" onclick="filterReviewType('multiple')" id="typeFilterMultiple">多选</button>
+                        </div>
+                    </div>
+                    <div class="review-filters">
+                        <div class="review-mode-toggle">
+                            <span class="filter-label">显示模式:</span>
+                            <button class="mode-btn active" onclick="setReviewMode('answer')" id="modeAnswer">显示答案</button>
+                            <button class="mode-btn" onclick="setReviewMode('question')" id="modeQuestion">仅看题目</button>
+                        </div>
+                    </div>
+                    <div id="reviewContent"></div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            `;
+            filterReviewChapter('all');
+        }
+
+        function filterReviewChapter(chapterId) {
+            reviewState.chapterFilter = chapterId;
+            reviewState.currentPage = 1;
+            applyFilters();
+            updateFilterButtons();
+        }
+
+        function filterReviewType(type) {
+            reviewState.typeFilter = type;
+            reviewState.currentPage = 1;
+            applyFilters();
+            updateTypeButtons();
+        }
+
+        function setReviewMode(mode) {
+            reviewState.mode = mode;
+            applyFilters();
+            updateModeButtons();
+        }
+
+        function updateFilterButtons() {
+            document.querySelectorAll('.filter-select').forEach(btn => btn.classList.remove('active'));
+            const chapterBtn = event?.target || document.querySelector(`.filter-select[onclick*="'${reviewState.chapterFilter}'"]`);
+            if (chapterBtn) chapterBtn.classList.add('active');
+        }
+
+        function updateTypeButtons() {
+            document.getElementById('typeFilterAll').classList.remove('active');
+            document.getElementById('typeFilterChoice').classList.remove('active');
+            document.getElementById('typeFilterMultiple').classList.remove('active');
+            if (reviewState.typeFilter === 'all') document.getElementById('typeFilterAll').classList.add('active');
+            if (reviewState.typeFilter === 'choice') document.getElementById('typeFilterChoice').classList.add('active');
+            if (reviewState.typeFilter === 'multiple') document.getElementById('typeFilterMultiple').classList.add('active');
+        }
+
+        function updateModeButtons() {
+            document.getElementById('modeAnswer').classList.remove('active');
+            document.getElementById('modeQuestion').classList.remove('active');
+            if (reviewState.mode === 'answer') document.getElementById('modeAnswer').classList.add('active');
+            if (reviewState.mode === 'question') document.getElementById('modeQuestion').classList.add('active');
+        }
+
+        function applyFilters() {
+            reviewState.filteredQuestions = allQuestionsList.filter(q => {
+                const chapterMatch = reviewState.chapterFilter === 'all' || getQuestionChapter(q) === reviewState.chapterFilter;
+                const typeMatch = reviewState.typeFilter === 'all' || q.type === reviewState.typeFilter;
+                return chapterMatch && typeMatch;
+            });
+            renderReviewContent();
+        }
+
+        function getQuestionChapter(question) {
+            if (introQuestions.includes(question) || introMultipleQuestions.includes(question)) return 3;
+            if (chapter1Questions.includes(question) || chapter1MultipleQuestions.includes(question)) return 4;
+            if (chapter2Questions.includes(question) || chapter2MultipleQuestions.includes(question)) return 5;
+            if (chapter3Questions.includes(question) || chapter3MultipleQuestions.includes(question)) return 6;
+            if (chapter4Questions.includes(question) || chapter4MultipleQuestions.includes(question)) return 7;
+            if (chapter5Questions.includes(question) || chapter5MultipleQuestions.includes(question)) return 8;
+            if (chapter6Questions.includes(question) || chapter6MultipleQuestions.includes(question)) return 9;
+            if (chapter7Questions.includes(question) || chapter7MultipleQuestions.includes(question)) return 10;
+            return 3;
+        }
+
+        function renderReviewContent() {
+            const total = reviewState.filteredQuestions.length;
+            const totalPages = Math.ceil(total / reviewState.pageSize);
+            const startIndex = (reviewState.currentPage - 1) * reviewState.pageSize;
+            const endIndex = Math.min(startIndex + reviewState.pageSize, total);
+            const currentPageQuestions = reviewState.filteredQuestions.slice(startIndex, endIndex);
+
+            const contentHtml = currentPageQuestions.map((q, index) => {
+                const questionIndex = startIndex + index + 1;
+                const chapterId = getQuestionChapter(q);
+                const chapterName = chapterNameMap[chapterId];
+                const answerText = q.type === 'choice' ? q.answer : q.answer.join('、');
+
+                const optionsHtml = reviewState.mode === 'answer' ? `
+                    <div class="review-options">
+                        ${q.options.map((opt, i) => {
+                            const letter = String.fromCharCode(65 + i);
+                            const isCorrect = q.type === 'choice'
+                                ? letter === q.answer
+                                : q.answer.includes(letter);
+                            return `<div class="review-option ${isCorrect ? 'correct' : ''}">
+                                <span class="option-letter">${letter}.</span>
+                                <span>${opt.substring(2)}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="review-options">
+                        ${q.options.map((opt, i) => {
+                            const letter = String.fromCharCode(65 + i);
+                            return `<div class="review-option">
+                                <span class="option-letter">${letter}.</span>
+                                <span>${opt.substring(2)}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
+
+                const answerHtml = reviewState.mode === 'answer' ? `
+                    <div class="review-answer">
+                        <div class="review-answer-label">✓ 正确答案: ${answerText}</div>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="review-card question-type-${q.type}">
+                        <div class="review-header">
+                            <span class="review-chapter-badge">${chapterName}</span>
+                            <span class="review-type-badge ${q.type === 'multiple' ? 'multiple' : ''}">
+                                ${q.type === 'choice' ? '单选题' : '多选题'}
+                            </span>
+                        </div>
+                        <div class="review-question">
+                            <strong>${questionIndex}.</strong> ${q.content}
+                        </div>
+                        ${optionsHtml}
+                        ${answerHtml}
+                        <div class="review-explanation">
+                            <div class="review-explanation-label">💡 解析</div>
+                            <div>${q.explanation || '暂无解析'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('reviewContent').innerHTML = contentHtml;
+
+            // 渲染分页
+            const paginationHtml = `
+                <span class="pagination-info">共 ${total} 道题目，第 ${reviewState.currentPage} / ${totalPages} 页</span>
+                <button class="btn-prev" onclick="reviewPage(${reviewState.currentPage - 1})" ${reviewState.currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                <button class="btn-next" onclick="reviewPage(${reviewState.currentPage + 1})" ${reviewState.currentPage >= totalPages ? 'disabled' : ''}>下一页</button>
+            `;
+            document.getElementById('pagination').innerHTML = paginationHtml;
+        }
+
+        function reviewPage(page) {
+            const totalPages = Math.ceil(reviewState.filteredQuestions.length / reviewState.pageSize);
+            if (page >= 1 && page <= totalPages) {
+                reviewState.currentPage = page;
+                renderReviewContent();
+                document.getElementById('reviewContent').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function showRandomAllWelcome() {
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header"><h1>🎲 全部题目随机答题</h1></div>
+                <div class="chapter-summary">
+                    <h2>欢迎来到全题库随机答题</h2>
+                    <p style="font-size:1.1em;color:#666;margin:25px 0;line-height:1.8">
+                        系统将从全部题库中随机打乱题目顺序<br>
+                        包含所有章节的单选题和多选题<br>
+                        共 ${allQuestionsList.length} 道题目
+                    </p>
+                    <div style="margin-top:30px">
+                        <button class="nav-btn btn-next" onclick="startRandomAllQuiz()">开始答题</button>
+                    </div>
+                    <div style="margin-top:15px">
+                        <button class="nav-btn btn-prev" onclick="selectChapter(1)">返回上一级</button>
+                    </div>
+                    <p style="margin-top:25px;color:#999;font-size:0.9em">每次开始都会重新随机打乱题目顺序</p>
+                </div>
+            `;
+        }
+
+        function startRandomAllQuiz() {
+            chapters[0].questions = shuffleArray([...allQuestionsList]);
+            renderQuestion();
+        }
+
+        function startRandomQuiz() {
+            const allQuestions = getAllQuestions();
+            if (allQuestions.length === 0) {
+                alert('没有可用的题目!');
+                return;
+            }
+            
+            const shuffled = shuffleArray(allQuestions);
+            randomQuizQuestions = shuffled.slice(0, Math.min(20, shuffled.length));
+            
+            currentQuestionIndex = 0;
+            selectedOptions = [];
+            answered = false;
+            randomQuizStats = { correct: 0, wrong: 0, skip: 0 };
+            randomQuizDetails = [];
+            
+            renderRandomQuestion();
+        }
+
+        function showRandomQuizWelcome() {
+            const allQuestions = getAllQuestions();
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header"><h1>🎲 随机答题模式</h1></div>
+                <div class="chapter-summary">
+                    <h2>欢迎来到随机答题系统</h2>
+                    <p style="font-size:1.1em;color:#666;margin:25px 0;line-height:1.8">系统将从题库中随机抽取20道题目进行测试<br>包含单选题和多选题,帮助你全面复习</p>
+                    <div style="font-size:1.1em;margin:25px 0;color:#666">
+                        <strong>📚 当前题库:</strong> ${allQuestions.length} 道题目
+                    </div>
+                    <div style="margin-top:30px">
+                        <button class="nav-btn btn-next" onclick="startRandomQuiz()">开始随机答题 (20题)</button>
+                    </div>
+                    <div style="margin-top:15px">
+                        <button class="nav-btn btn-prev" onclick="selectChapter(0)">返回主菜单</button>
+                    </div>
+                    <p style="margin-top:25px;color:#999;font-size:0.9em">每次答题都会随机抽取不同的题目</p>
+                </div>
+            `;
+        }
+
+        function renderRandomQuestion() {
+            const contentArea = document.getElementById('contentArea');
+            
+            if (currentQuestionIndex >= randomQuizQuestions.length) {
+                showRandomQuizSummary();
+                return;
+            }
+
+            const question = randomQuizQuestions[currentQuestionIndex];
+            selectedOptions = question.type === 'multiple' ? [] : null;
+            answered = false;
+
+            const optionsHtml = question.options.map((opt, idx) => {
+                const letter = String.fromCharCode(65 + idx);
+                const clickHandler = question.type === 'choice'
+                    ? `selectRandomOption('${letter}')`
+                    : `toggleRandomOption('${letter}')`;
+                return `<div class="option" id="opt-${letter}" onclick="${clickHandler}">
+                    <span class="option-letter">${letter}.</span>
+                    <span>${opt.substring(2)}</span>
+                </div>`;
+            }).join('');
+
+            contentArea.innerHTML = `
+                <div class="header">
+                    <h1>🎲 随机答题模式</h1>
+                    <div class="progress">
+                        <span class="progress-text">第 ${currentQuestionIndex + 1} 题 / 共 ${randomQuizQuestions.length} 题</span>
+                        <span class="stats">正确: ${randomQuizStats.correct} | 错误: ${randomQuizStats.wrong} | 跳过: ${randomQuizStats.skip}</span>
+                    </div>
+                </div>
+                <div class="question">
+                    <div class="question-header">
+                        <span class="question-number">第 ${currentQuestionIndex + 1} 题</span>
+                        <span class="question-type">${question.type === 'choice' ? '单选题' : '多选题'}</span>
+                    </div>
+                    <div class="question-content">${question.content}</div>
+                    <div class="options" id="optionsContainer">${optionsHtml}</div>
+                    <div class="result-panel" id="resultPanel"></div>
+                    <div class="explanation" id="explanation">
+                        <div class="explanation-title">💡 解析</div>
+                        <div class="explanation-content">${question.explanation || '暂无解析'}</div>
+                    </div>
+                    <div class="action-bar" id="actionBar">
+                        <button class="action-btn btn-submit" id="submitBtn" onclick="submitRandomAnswer()" disabled>提交答案</button>
+                    </div>
+                    <div class="navigation">
+                        <button class="nav-btn btn-prev" onclick="prevRandomQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>上一题</button>
+                        <button class="nav-btn btn-skip" onclick="skipRandomQuestion()">跳过</button>
+                        <button class="nav-btn btn-next" onclick="showRandomQuizSummary()">查看结果</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectRandomOption(option) {
+            if (answered) return;
+            selectedOptions = option;
+            document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`opt-${option}`).classList.add('selected');
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function toggleRandomOption(option) {
+            if (answered) return;
+            const optionEl = document.getElementById(`opt-${option}`);
+            if (selectedOptions.includes(option)) {
+                selectedOptions = selectedOptions.filter(opt => opt !== option);
+                optionEl.classList.remove('selected');
+            } else {
+                selectedOptions.push(option);
+                optionEl.classList.add('selected');
+            }
+            document.getElementById('submitBtn').disabled = selectedOptions.length === 0;
+        }
+
+        function submitRandomAnswer() {
+            if (!selectedOptions || answered) return;
+            answered = true;
+            const question = randomQuizQuestions[currentQuestionIndex];
+            let isCorrect = question.type === 'choice' 
+                ? selectedOptions === question.answer 
+                : JSON.stringify(selectedOptions.sort()) === JSON.stringify(question.answer.sort());
+
+            const detail = {
+                index: currentQuestionIndex + 1,
+                content: question.content,
+                type: question.type,
+                userAnswer: selectedOptions,
+                correctAnswer: question.answer,
+                isCorrect: isCorrect,
+                skipped: false
+            };
+
+            if (isCorrect) {
+                randomQuizStats.correct++;
+                document.getElementById('resultPanel').innerHTML = '<div style="font-size:2em">✓</div><div>回答正确!</div>';
+                document.getElementById('resultPanel').className = 'result-panel show correct';
+            } else {
+                randomQuizStats.wrong++;
+                document.getElementById('resultPanel').innerHTML = '<div style="font-size:2em">✗</div><div>回答错误! 正确答案: ' + (question.type === 'choice' ? question.answer : question.answer.join(', ')) + '</div>';
+                document.getElementById('resultPanel').className = 'result-panel show wrong';
+                if (question.type === 'choice') {
+                    document.getElementById('opt-' + question.answer).classList.add('correct');
+                    if (selectedOptions !== question.answer) document.getElementById('opt-' + selectedOptions).classList.add('wrong');
+                } else {
+                    question.answer.forEach(ans => document.getElementById('opt-' + ans).classList.add('correct'));
+                    selectedOptions.forEach(opt => { if (!question.answer.includes(opt)) document.getElementById('opt-' + opt).classList.add('wrong'); });
+                }
+            }
+
+            randomQuizDetails.push(detail);
+            document.getElementById('explanation').classList.add('show');
+            document.querySelectorAll('.option').forEach(el => el.classList.add('disabled'));
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('actionBar').innerHTML = '<button class="action-btn btn-next-question" onclick="nextRandomQuestion()">下一题</button>';
+        }
+
+        function nextRandomQuestion() { 
+            currentQuestionIndex++; 
+            renderRandomQuestion(); 
+        }
+
+        function prevRandomQuestion() { 
+            if (currentQuestionIndex > 0) { 
+                currentQuestionIndex--; 
+                answered = false;
+                selectedOptions = randomQuizQuestions[currentQuestionIndex].type === 'multiple' ? [] : null;
+                renderRandomQuestion(); 
+            } 
+        }
+
+        function skipRandomQuestion() { 
+            if (answered) return;
+            randomQuizStats.skip++;
+            
+            const detail = {
+                index: currentQuestionIndex + 1,
+                content: randomQuizQuestions[currentQuestionIndex].content,
+                type: randomQuizQuestions[currentQuestionIndex].type,
+                userAnswer: null,
+                correctAnswer: randomQuizQuestions[currentQuestionIndex].answer,
+                isCorrect: false,
+                skipped: true
+            };
+            randomQuizDetails.push(detail);
+            
+            currentQuestionIndex++; 
+            renderRandomQuestion(); 
+        }
+
+        function showRandomQuizSummary() {
+            const total = randomQuizStats.correct + randomQuizStats.wrong + randomQuizStats.skip;
+            const accuracy = total > 0 ? Math.round(randomQuizStats.correct / (randomQuizStats.correct + randomQuizStats.wrong) * 100) : 0;
+            
+            const detailHtml = randomQuizDetails.map(detail => `
+                <div class="detail-item ${detail.skipped ? 'skip' : (detail.isCorrect ? 'correct' : 'wrong')}">
+                    <div class="question-preview"><strong>第 ${detail.index}题:</strong> ${detail.content.substring(0, 50)}...</div>
+                    <div class="answer-info">
+                        ${detail.skipped ? '已跳过' : (detail.isCorrect ? '✓ 正确' : '✗ 错误 | 正确答案: ' + (detail.type === 'choice' ? detail.correctAnswer : detail.correctAnswer.join(', ')))}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header"><h1>🎊 答题完成!</h1></div>
+                <div class="chapter-summary">
+                    <h2>随机答题结果</h2>
+                    <div style="font-size:1.2em;margin:15px 0">共完成 ${total} 道题目</div>
+                    <div class="summary-stats">
+                        <div class="summary-stat correct">✓ 正确: ${randomQuizStats.correct}</div>
+                        <div class="summary-stat wrong">✗ 错误: ${randomQuizStats.wrong}</div>
+                        <div class="summary-stat skip">⊗ 跳过: ${randomQuizStats.skip}</div>
+                    </div>
+                    <div class="accuracy-rate" style="color:${accuracy >= 60 ? '#28a745' : accuracy >= 40 ? '#ffc107' : '#dc3545'}">正确率: ${accuracy}%</div>
+                    <div style="margin-top:30px">
+                        <button class="nav-btn btn-next" onclick="startRandomQuiz()">再刷20题</button>
+                        <button class="nav-btn btn-prev" onclick="showRandomQuizWelcome()">返回首页</button>
+                    </div>
+                    <div class="detail-list">
+                        <h3 style="margin-bottom:15px;color:#667eea">📋 答题详情</h3>
+                        ${detailHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuestion() {
+            const chapter = chapters[currentChapterIndex];
+            const contentArea = document.getElementById('contentArea');
+            
+            if (currentQuestionIndex >= chapter.questions.length) {
+                showChapterSummary();
+                return;
+            }
+
+            const question = chapter.questions[currentQuestionIndex];
+            selectedOptions = question.type === 'multiple' ? [] : null;
+            answered = false;
+
+            const optionsHtml = question.options.map((opt, idx) => {
+                const letter = String.fromCharCode(65 + idx);
+                const clickHandler = question.type === 'choice'
+                    ? `selectOption('${letter}')`
+                    : `toggleOption('${letter}')`;
+                return `<div class="option" id="opt-${letter}" onclick="${clickHandler}">
+                    <span class="option-letter">${letter}.</span>
+                    <span>${opt.substring(2)}</span>
+                </div>`;
+            }).join('');
+
+            contentArea.innerHTML = `
+                <div class="header">
+                    <h1>${chapter.name}</h1>
+                    <div class="progress">
+                        <span class="progress-text">第 ${currentQuestionIndex + 1} 题 / 共 ${chapter.questions.length} 题</span>
+                        <span class="stats">正确: ${chapter.stats.correct} | 错误: ${chapter.stats.wrong} | 跳过: ${chapter.stats.skip}</span>
+                    </div>
+                </div>
+                <div class="question">
+                    <div class="question-header">
+                        <span class="question-number">第 ${currentQuestionIndex + 1} 题</span>
+                        <span class="question-type">${question.type === 'choice' ? '单选题' : '多选题'}</span>
+                    </div>
+                    <div class="question-content">${question.content}</div>
+                    <div class="options" id="optionsContainer">${optionsHtml}</div>
+                    <div class="result-panel" id="resultPanel"></div>
+                    <div class="explanation" id="explanation">
+                        <div class="explanation-title">💡 解析</div>
+                        <div class="explanation-content">${question.explanation || '暂无解析'}</div>
+                    </div>
+                    <div class="action-bar" id="actionBar">
+                        <button class="action-btn btn-submit" id="submitBtn" onclick="submitAnswer()" disabled>提交答案</button>
+                    </div>
+                    <div class="navigation">
+                        <button class="nav-btn btn-prev" onclick="prevQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>上一题</button>
+                        <button class="nav-btn btn-next" onclick="skipQuestion()">跳过</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectOption(option) {
+            if (answered) return;
+            selectedOptions = option;
+            document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`opt-${option}`).classList.add('selected');
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function toggleOption(option) {
+            if (answered) return;
+            const optionEl = document.getElementById(`opt-${option}`);
+            if (selectedOptions.includes(option)) {
+                selectedOptions = selectedOptions.filter(opt => opt !== option);
+                optionEl.classList.remove('selected');
+            } else {
+                selectedOptions.push(option);
+                optionEl.classList.add('selected');
+            }
+            document.getElementById('submitBtn').disabled = selectedOptions.length === 0;
+        }
+
+        function submitAnswer() {
+            if (!selectedOptions || answered) return;
+            answered = true;
+            const chapter = chapters[currentChapterIndex];
+            const question = chapter.questions[currentQuestionIndex];
+            let isCorrect = question.type === 'choice' 
+                ? selectedOptions === question.answer 
+                : JSON.stringify(selectedOptions.sort()) === JSON.stringify(question.answer.sort());
+
+            if (isCorrect) {
+                chapter.stats.correct++;
+                document.getElementById('resultPanel').innerHTML = '<div style="font-size:2em">✓</div><div>回答正确!</div>';
+                document.getElementById('resultPanel').className = 'result-panel show correct';
+            } else {
+                chapter.stats.wrong++;
+                document.getElementById('resultPanel').innerHTML = '<div style="font-size:2em">✗</div><div>回答错误! 正确答案: ' + (question.type === 'choice' ? question.answer : question.answer.join(', ')) + '</div>';
+                document.getElementById('resultPanel').className = 'result-panel show wrong';
+                if (question.type === 'choice') {
+                    document.getElementById('opt-' + question.answer).classList.add('correct');
+                    if (selectedOptions !== question.answer) document.getElementById('opt-' + selectedOptions).classList.add('wrong');
+                } else {
+                    question.answer.forEach(ans => document.getElementById('opt-' + ans).classList.add('correct'));
+                    selectedOptions.forEach(opt => { if (!question.answer.includes(opt)) document.getElementById('opt-' + opt).classList.add('wrong'); });
+                }
+            }
+            document.getElementById('explanation').classList.add('show');
+            document.querySelectorAll('.option').forEach(el => el.classList.add('disabled'));
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('actionBar').innerHTML = '<button class="action-btn btn-next-question" onclick="nextQuestion()">下一题</button>';
+        }
+
+        function nextQuestion() { currentQuestionIndex++; renderQuestion(); }
+        function prevQuestion() { if (currentQuestionIndex > 0) { currentQuestionIndex--; renderQuestion(); } }
+        function skipQuestion() { chapters[currentChapterIndex].stats.skip++; currentQuestionIndex++; renderQuestion(); }
+
+        function showChapterSummary() {
+            const chapter = chapters[currentChapterIndex];
+            const total = chapter.stats.correct + chapter.stats.wrong + chapter.stats.skip;
+            chapter.stats.completed = true;
+            const accuracy = total > 0 ? Math.round(chapter.stats.correct / total * 100) : 0;
+
+            let buttonHtml = '';
+            if (currentChapterIndex === 0) {
+                buttonHtml = `<button class="nav-btn btn-next" onclick="startRandomAllQuiz()">重新开始</button>`;
+            } else if (currentChapterIndex === 1) {
+                buttonHtml = `<button class="nav-btn btn-next" onclick="startRandomQuiz()">再刷20题</button>`;
+            } else {
+                buttonHtml = `<button class="nav-btn btn-next" onclick="restartChapter(${currentChapterIndex})">重新练习本章</button>`;
+            }
+
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header"><h1>${chapter.name}</h1></div>
+                <div class="chapter-summary">
+                    <h2>🎉 本章答题完成!</h2>
+                    <div style="font-size:1.2em;margin:15px 0">共完成 ${total} 道题目</div>
+                    <div class="summary-stats">
+                        <div class="summary-stat correct">✓ 正确: ${chapter.stats.correct}</div>
+                        <div class="summary-stat wrong">✗ 错误: ${chapter.stats.wrong}</div>
+                        <div class="summary-stat skip">⊗ 跳过: ${chapter.stats.skip}</div>
+                    </div>
+                    <div class="accuracy-rate" style="color:${accuracy > 60 ? '#28a745' : accuracy > 40 ? '#ffc107' : '#dc3545'}">正确率: ${accuracy}%</div>
+                    <div style="margin-top:30px">
+                        ${buttonHtml}
+                        <button class="nav-btn btn-prev" onclick="selectChapter(0)">返回首页</button>
+                    </div>
+                </div>`;
+            initChapterList();
+        }
+
+        function restartChapter(chapterIndex) {
+            chapters[chapterIndex].stats = { correct: 0, wrong: 0, skip: 0, completed: false };
+            currentQuestionIndex = 0;
+            selectedOptions = [];
+            answered = false;
+            renderQuestion();
+        }
+
+        function showOverallSummary() {
+            const regularChapters = chapters.slice(2);
+            const totalChapters = regularChapters.length;
+            const completedChapters = regularChapters.filter(c => c.stats.completed).length;
+            let totalCorrect = 0, totalWrong = 0, totalSkip = 0;
+            regularChapters.forEach(c => { totalCorrect += c.stats.correct; totalWrong += c.stats.wrong; totalSkip += c.stats.skip; });
+            const accuracy = totalCorrect + totalWrong > 0 ? Math.round(totalCorrect / (totalCorrect + totalWrong) * 100) : 0;
+
+            document.getElementById('contentArea').innerHTML = `
+                <div class="header"><h1>📚 全部章节概览</h1></div>
+                <div class="chapter-summary">
+                    <h2>🎯 学习进度</h2>
+                    <div style="font-size:1.2em;margin:15px 0">已完成 ${completedChapters} / ${totalChapters} 章节</div>
+                    <div class="summary-stats">
+                        <div class="summary-stat correct">✓ 正确: ${totalCorrect}</div>
+                        <div class="summary-stat wrong">✗ 错误: ${totalWrong}</div>
+                        <div class="summary-stat skip">⊗ 跳过: ${totalSkip}</div>
+                    </div>
+                    <div class="accuracy-rate" style="color:${accuracy > 60 ? '#28a745' : accuracy > 40 ? '#ffc107' : '#dc3545'}">总正确率: ${accuracy}%</div>
+                    <div class="overall-summary">
+                        ${regularChapters.map(chapter => `
+                            <div class="chapter-progress ${chapter.stats.completed ? 'completed' : 'incomplete'}">
+                                <span>${chapter.name}</span>
+                                <span>${chapter.stats.completed ? '✓ 已完成' : '○ 未完成'}</span>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+        }
+
+        initChapterList();
+        selectChapter(0);
+    </script>
+</body>
+</html>
